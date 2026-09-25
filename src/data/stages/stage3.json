@@ -1,35 +1,257 @@
 {
   "id": "s3",
   "index": 3,
-  "name": "LEVIATHAN",
-  "subtitle": "Intercept the sky fortress",
+  "name": "FLEET LINE",
+  "subtitle": "Break the enemy picket line",
   "biome": "ocean",
   "lighting": "dusk",
   "cruise": 340,
-  "duration": 45,
+  "duration": 82,
   "music": "ocean",
   "rail": [
-    [0, 0, 140],
-    [4000, 180, 160],
-    [8000, -150, 130],
-    [12000, 0, 170],
-    [16000, 250, 150],
-    [20000, 0, 140],
-    [60000, 0, 140]
+    [0, 0, 130],
+    [4000, 160, 110],
+    [8000, -120, 150],
+    [12000, 0, 120],
+    [16000, 220, 160],
+    [20000, -200, 120],
+    [24000, 0, 110],
+    [28000, 120, 140],
+    [45000, 0, 140]
   ],
   "events": [
-    { "t": 0, "type": "music", "track": "ocean" },
-    { "t": 0.5, "type": "banner", "text": "STAGE 3", "sub": "LEVIATHAN", "duration": 3 },
-    { "t": 3, "type": "wave", "enemy": "drone", "count": 7, "formation": "v", "spacing": 45 },
-    { "t": 7, "type": "wave", "enemy": "fighter", "count": 3, "formation": "line", "spacing": 120, "params": { "breakaway": 2, "weave": 30 } },
-    { "t": 11, "type": "wave", "enemy": "chaser", "count": 2, "formation": "line", "spacing": 80, "params": { "holdTime": 4 } },
-    { "t": 16, "type": "wave", "enemy": "drone", "count": 8, "formation": "circle", "params": { "radius": 90, "spin": 1.1 } },
-    { "t": 20, "type": "wave", "enemy": "fighter", "count": 4, "formation": "v", "spacing": 90, "params": { "breakaway": 1 } },
-    { "t": 24, "type": "wave", "enemy": "ace", "count": 1, "y": 20, "params": { "holdTime": 8 } },
-    { "t": 26, "type": "wave", "enemy": "drone", "count": 6, "from": "left", "stagger": 0.2, "params": { "z": -900 } },
-    { "t": 29, "type": "wave", "enemy": "drone", "count": 6, "from": "right", "stagger": 0.2, "params": { "z": -1100 } },
-    { "t": 37, "type": "music", "track": "boss" },
-    { "t": 37, "type": "banner", "text": "WARNING", "sub": "HUGE AIRBORNE FORTRESS APPROACHING", "duration": 4 },
-    { "t": 41, "type": "boss", "id": "fortress" }
+    {
+      "t": 0,
+      "type": "music",
+      "track": "ocean"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 3",
+      "sub": "FLEET LINE",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "formation": "v",
+      "spacing": 45,
+      "variants": [
+        {
+          "formation": "line"
+        },
+        {
+          "formation": "circle",
+          "params": {
+            "radius": 80,
+            "spin": 1.2
+          }
+        }
+      ]
+    },
+    {
+      "t": 6,
+      "type": "callout",
+      "text": "Enemy destroyers ahead. Missiles only on surface targets!"
+    },
+    {
+      "t": 6.5,
+      "type": "wave",
+      "enemy": "destroyer",
+      "count": 2,
+      "formation": "line",
+      "spacing": 420,
+      "params": {
+        "dir": -1
+      }
+    },
+    {
+      "t": 9,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 3,
+      "formation": "v",
+      "spacing": 90,
+      "params": {
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 13,
+      "type": "wave",
+      "enemy": "missileboat",
+      "count": 4,
+      "formation": "scatter",
+      "spacing": 120,
+      "params": {
+        "dir": -1
+      }
+    },
+    {
+      "t": 16,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 2,
+      "formation": "line",
+      "spacing": 200,
+      "y": 10
+    },
+    {
+      "t": 22,
+      "type": "clouds",
+      "on": true
+    },
+    {
+      "t": 22.5,
+      "type": "banner",
+      "text": "CLOUD DECK",
+      "sub": "WATCH YOUR RADAR",
+      "duration": 2.5
+    },
+    {
+      "t": 23,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "formation": "scatter",
+      "spacing": 70
+    },
+    {
+      "t": 27,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 4,
+      "formation": "line",
+      "spacing": 100,
+      "params": {
+        "weave": 40,
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 31,
+      "type": "clouds",
+      "on": false
+    },
+    {
+      "t": 32,
+      "type": "callout",
+      "text": "Bandits on your six!"
+    },
+    {
+      "t": 32.5,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 3,
+      "formation": "line",
+      "spacing": 70,
+      "params": {
+        "holdTime": 8
+      }
+    },
+    {
+      "t": 37,
+      "type": "loop"
+    },
+    {
+      "t": 42,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 3,
+      "formation": "v",
+      "spacing": 150,
+      "y": 25
+    },
+    {
+      "t": 46,
+      "type": "wave",
+      "enemy": "destroyer",
+      "count": 1,
+      "x": 0,
+      "params": {
+        "dir": -1
+      }
+    },
+    {
+      "t": 47,
+      "type": "wave",
+      "enemy": "missileboat",
+      "count": 3,
+      "formation": "line",
+      "spacing": 180,
+      "params": {
+        "dir": -1
+      }
+    },
+    {
+      "t": 50,
+      "type": "speed",
+      "value": 1.15
+    },
+    {
+      "t": 52,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 1,
+      "y": 20,
+      "params": {
+        "holdTime": 9
+      }
+    },
+    {
+      "t": 54,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "left",
+      "stagger": 0.2,
+      "params": {
+        "z": -900
+      }
+    },
+    {
+      "t": 62,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 3,
+      "formation": "v",
+      "spacing": 150
+    },
+    {
+      "t": 66,
+      "type": "wave",
+      "enemy": "destroyer",
+      "count": 2,
+      "formation": "line",
+      "spacing": 500,
+      "params": {
+        "dir": -1
+      }
+    },
+    {
+      "t": 68,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 5,
+      "formation": "v",
+      "spacing": 85,
+      "params": {
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 74,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "circle",
+      "params": {
+        "radius": 90,
+        "spin": -1.2
+      }
+    }
   ]
 }

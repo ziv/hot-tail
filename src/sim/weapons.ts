@@ -18,14 +18,15 @@ const _tv = new Vector3();
 export function updatePlayerWeapons(sim: Sim, input: InputFrame, dt: number): void {
   const p = sim.player;
   pruneLocks(p.locks);
-  if (p.dead || sim.state === 'gameover') {
+  if (p.dead || p.loopTime >= 0 || sim.state === 'gameover' || sim.state === 'refuel') {
     releaseLocks(p.locks);
     p.lockHeld = 0;
     return;
   }
 
   // Vulcan: a fixed-rate stream from alternating gun ports along the aim vector.
-  const firing = (input.buttons & Btn.Fire) !== 0;
+  const firing =
+    (input.buttons & Btn.Fire) !== 0 || (sim.options.autoFire && findLockTarget(sim, 0.9, true) !== null);
   if (firing) {
     p.gunTimer -= dt;
     const interval = 1 / tuning.vulcan.rate;
@@ -44,12 +45,13 @@ export function updatePlayerWeapons(sim: Sim, input: InputFrame, dt: number): vo
     p.lockHeld += dt;
     p.lockTimer -= dt;
     const ammo = sim.cheats.infiniteMissiles ? 99 : p.missiles - p.volley.length;
-    if (p.lockTimer <= 0 && p.locks.length < tuning.lock.maxLocks && p.locks.length < ammo) {
+    if (p.lockTimer <= 0 && p.locks.length < sim.jet.maxLocks && p.locks.length < ammo) {
       const t = findLockTarget(sim, 1);
       if (t) {
         t.locks++;
         p.locks.push({ e: t, id: t.id });
-        p.lockTimer = tuning.lock.interval;
+        // Difficulty scales lock time around the tuned (normal) interval.
+        p.lockTimer = tuning.lock.interval * (sim.diff.lockInterval / 0.09);
         sim.events.emit('lockOn', { target: t, count: p.locks.length });
       }
     }
@@ -95,14 +97,14 @@ function releaseLocks(locks: LockSlot[]): void {
 }
 
 /** Best lockable target inside the aim cone (scaled by coneScale), or null. */
-export function findLockTarget(sim: Sim, coneScale: number): Entity | null {
+export function findLockTarget(sim: Sim, coneScale: number, airOnly = false): Entity | null {
   const p = sim.player;
   const pos = p.e.pos;
   const lk = tuning.lock;
   let best: Entity | null = null;
   let bestScore = Infinity;
   for (const t of sim.targets.items) {
-    if (!t.alive || !t.lockable) continue;
+    if (!t.alive || !t.lockable || (airOnly && t.layer === 'surface')) continue;
     const maxLocks = t.kind === 'bossPart' ? 3 : 1;
     if (t.locks >= maxLocks) continue;
     _to.subVectors(t.pos, pos);
@@ -114,7 +116,8 @@ export function findLockTarget(sim: Sim, coneScale: number): Entity | null {
     // Near targets get a little extra slack so close passes are still lockable.
     const cone = (lk.cone + lk.coneNear / dist) * coneScale;
     if (angle > cone) continue;
-    const score = angle / cone + (dist / lk.rangeMax) * 0.3;
+    // Prefer air threats over ground targets when both are under the reticle.
+    const score = angle / cone + (dist / lk.rangeMax) * 0.3 + (t.layer === 'surface' ? 0.35 : 0);
     if (score < bestScore) {
       bestScore = score;
       best = t;
@@ -219,14 +222,17 @@ export function updateMissile(sim: Sim, m: Entity, dt: number): void {
   } else {
     const et = tuning.enemy;
     const pe = sim.player.e;
+    const turn = et.missileTurnRate * sim.diff.enemyMissileTurn * dt;
     if (ms.tracking && !sim.player.dead) {
       _rel.subVectors(pe.pos, m.pos);
       const dist = _rel.length();
       _rel.divideScalar(dist);
       if (_rel.dot(_dir) < 0.2 && dist < 400) ms.tracking = false;
-      else rotateToward(_dir, _rel, et.missileTurnRate * dt);
+      else rotateToward(_dir, _rel, turn);
     } else {
       ms.tracking = false;
+      // Decoyed by a flare: chase it instead.
+      if (ms.target) rotateToward(_dir, _rel.subVectors(ms.target.pos, m.pos).normalize(), turn * 2);
     }
     m.vel.copy(_dir).multiplyScalar(ms.speed);
   }

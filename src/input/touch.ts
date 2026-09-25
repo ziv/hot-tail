@@ -23,6 +23,7 @@ const BUTTONS: ButtonDef[] = [
   { id: 'roll', label: 'ROLL', bit: Btn.Roll },
   { id: 'boost', label: 'BOOST', bit: Btn.Boost },
   { id: 'brake', label: 'BRAKE', bit: Btn.Brake },
+  { id: 'flare', label: 'FLARE', bit: Btn.Flare },
 ];
 
 export class TouchControls {

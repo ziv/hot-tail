@@ -1,4 +1,4 @@
-import { PerspectiveCamera, Vector3 } from 'three';
+import { PerspectiveCamera, Quaternion, Vector3 } from 'three';
 import { approach } from '@/sim/math';
 import type { Sim } from '@/sim/sim';
 
@@ -6,11 +6,15 @@ import type { Sim } from '@/sim/sim';
  * Chase camera (B14): follows the jet inside the envelope with lag, rolls a
  * little with the bank, kicks FOV on afterburner and shakes on trauma.
  */
+const X_AXIS = new Vector3(1, 0, 0);
+
 export class CameraRig {
   readonly camera = new PerspectiveCamera(70, 1, 1, 12000);
   private readonly pos = new Vector3(0, 15, 58);
   private readonly look = new Vector3(0, 6, -260);
   private readonly tmp = new Vector3();
+  private readonly tmp2 = new Vector3();
+  private readonly loopQ = new Quaternion();
   private trauma = 0;
   private roll = 0;
   private fov = 70;
@@ -46,6 +50,17 @@ export class CameraRig {
     this.tmp.copy(this.look);
     this.tmp.x += this.yaw * 260;
     cam.lookAt(this.tmp);
+
+    // Scripted loop (C5): orbit the whole view around the jet's pitch axis.
+    if (p.loopAngle > 0) {
+      this.loopQ.setFromAxisAngle(X_AXIS, p.loopAngle);
+      this.tmp2.subVectors(cam.position, player).applyQuaternion(this.loopQ);
+      cam.position.copy(player).add(this.tmp2);
+      this.tmp2.subVectors(this.tmp, player).applyQuaternion(this.loopQ);
+      this.tmp.copy(player).add(this.tmp2);
+      cam.up.set(0, 1, 0).applyQuaternion(this.loopQ);
+      cam.lookAt(this.tmp);
+    }
 
     if (this.trauma > 0) {
       const s = this.trauma * this.trauma * this.shakeScale;

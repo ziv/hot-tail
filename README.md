@@ -9,7 +9,9 @@ pnpm install
 pnpm dev          # http://localhost:5173
 ```
 
-Useful URL flags: `?debug` (tuning panel, timeline scrubber, cheats — also the <kbd>`</kbd> key), `?quality=low|medium|high`, `?autotest` (autopilot plays stage 1; used by the smoke test).
+Useful URL flags: `?debug` (tuning panel, timeline scrubber, cheats, all practice stages unlocked — also the <kbd>`</kbd> key), `?quality=low|medium|high`, `?autotest` (autopilot plays stage 1; used by the smoke test).
+
+Online leaderboard: set `VITE_API_BASE` to a deployed [Hot Tail API](./server/README.md) at build time. Without it, scores are kept locally and everything else works offline (the production build is also an installable PWA).
 
 | Command | What it does |
 | --- | --- |
@@ -26,6 +28,7 @@ Useful URL flags: `?debug` (tuning panel, timeline scrubber, cheats — also the
 | Lock + missiles | Hold K / X / right mouse, release to fire | X / RB | MSL (hold) |
 | Barrel roll | L / C, or double-tap a direction | B / LB | ROLL |
 | Afterburner / air-brake | Shift or E / Q or Z | RT / LT | BOOST / BRAKE |
+| Flares | R / V | Y | FLARE |
 | Pause · fullscreen | Esc / P · F | Start | II |
 
 ## Architecture
@@ -41,16 +44,20 @@ src/
   audio/    Web Audio engine, synthesised SFX, procedural music sequencer
   input/    action map over keyboard, pointer lock, gamepad, touch
   ui/       HUD canvas, HTML screen stack, debug panel
-  game/     app state machine (boot → title → play → results → …), settings
-  data/     tuning.json, enemies.json, stage timelines (hot-reload in dev)
+  game/     app state machine (boot → title → play → results → …), versioned save
+  net/      leaderboard client (online or local fallback), anonymous analytics
+  data/     tuning.json, enemies.json, jets.json, stage timelines (hot-reload in dev)
+shared/     leaderboard rules shared by client and API (validation, profanity filter)
+server/     Cloudflare Worker + D1 leaderboard/analytics API
 ```
 
 The simulation never touches the DOM or WebGL, so it runs in Node for tests: the same seed + input log reproduces a run bit-for-bit. The player's frame is a floating origin: the jet stays near (0,0,0) and the world scrolls past along a rail spline.
 
-All art and audio are procedural placeholders generated at boot — no asset downloads (production build ≈ 200 KB gzipped).
+All art and audio are procedural placeholders generated at boot — no asset downloads (production build ≈ 215 KB gzipped). Two visual styles are selectable in Settings → Graphics: modern 3D, and a retro sprite-scaling mode that pre-renders every model into angle-indexed sprite atlases at boot and draws entities as billboards at ~288 lines with scanlines.
 
 ## Milestone status
 
 - **M1 core prototype — done.** Flight envelope + rail, throttle, roll, vulcan, lock-on volleys, homing missiles, enemy framework, streaming terrain, debug overlay, smoke test.
-- **M2 vertical slice — done** (with placeholder art/audio). Polished ocean biome with 3 lighting presets, 3 stages incl. the *Leviathan* flying-fortress boss (3 phases), 4 fighter types, final HUD, menus, results tally, music + SFX, touch layout.
-- Deferred from M0–M2: glTF/KTX2 asset pipeline (A7) and real asset loading (B4) until real art exists; preview-deploy pipeline (A3); error reporting endpoint (J7, errors are captured locally); on-device mobile profiling (K4).
+- **M2 vertical slice — done** (placeholder art/audio). Ocean biome with lighting presets, boss framework, final HUD, menus, results tally, music + SFX, touch layout.
+- **M3 alpha — done** (placeholder art/audio). All 12 enemy types (fighters, heavy air, missile-only ground and naval targets), flares, 3 jets, difficulty + dynamic easing, aim assist / auto-fire, scripted loop, tanker refuel, fly-through clouds, radar + threat ring, desert canyon biome, stages 1–6 with Boss 1 (stage 6) and Boss 2 carrier group (practice preview), seeded wave variants, Arcade / Score Attack / Practice, name entry, leaderboards (API + offline), save migrations, key rebinding, accessibility options, attract-mode replays, quality auto-benchmark, PWA.
+- Deferred: glTF/KTX2 pipeline (A7) until real art exists; preview-deploy pipeline (A3); error-report endpoint (J7); on-device mobile passes (K4, Q5) — need physical devices; contracted music/SFX (H6/H7).

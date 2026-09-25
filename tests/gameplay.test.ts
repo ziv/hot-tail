@@ -194,7 +194,7 @@ describe('Stage director', () => {
     let defeated = false;
     sim.events.on('bossPhase', (e) => phases.push(e.phase));
     sim.events.on('bossDefeated', () => (defeated = true));
-    sim.loadStage(STAGES[2]);
+    sim.loadStage(STAGES[5]);
     sim.director!.jumpTo(sim, 41);
     const input: InputFrame = { x: 0, y: 0, buttons: 0 };
     for (let i = 0; i < 60 * 150 && sim.state === 'playing'; i++) sim.step(botInput(sim, input));

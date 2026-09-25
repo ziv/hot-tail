@@ -23,6 +23,10 @@ export interface ScreenOptions {
   /** Logo instead of a plain title. */
   logo?: boolean;
   footer?: string;
+  /** Custom navigation; return true when the action was consumed. */
+  onNav?: (a: NavAction) => boolean;
+  /** Called when the screen leaves the stack. */
+  onClose?: () => void;
 }
 
 export class Screen {
@@ -120,6 +124,7 @@ export class Screen {
   }
 
   nav(a: NavAction): void {
+    if (this.opts.onNav?.(a)) return;
     const items = this.opts.items ?? [];
     switch (a) {
       case 'up':
@@ -183,6 +188,7 @@ export class UI {
   pop(): void {
     const s = this.stack.pop();
     s?.el.remove();
+    s?.opts.onClose?.();
     const top = this.top;
     if (top) {
       top.el.classList.remove('hidden');
@@ -196,7 +202,11 @@ export class UI {
   }
 
   clear(): void {
-    while (this.stack.length) this.stack.pop()!.el.remove();
+    while (this.stack.length) {
+      const s = this.stack.pop()!;
+      s.el.remove();
+      s.opts.onClose?.();
+    }
   }
 
   nav(a: NavAction): void {

@@ -229,6 +229,25 @@ export class Sfx {
     n.stop(t + 0.7);
   }
 
+  flare(): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    for (let i = 0; i < 3; i++) {
+      const n = this.noiseSrc();
+      const f = ctx.createBiquadFilter();
+      f.type = 'highpass';
+      f.frequency.value = 1800;
+      const g = ctx.createGain();
+      this.env(g.gain, t + i * 0.07, 0.35, 0.003, 0.18);
+      n.connect(f)
+        .connect(g)
+        .connect(this.out((i - 1) * 80, 0, 0.7));
+      n.start(t + i * 0.07);
+      n.stop(t + i * 0.07 + 0.25);
+    }
+  }
+
   jingle(notes: number[], step = 0.09, type: OscillatorType = 'square'): void {
     const ctx = this.ctx;
     if (!ctx) return;

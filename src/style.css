@@ -397,7 +397,7 @@ body {
   bottom: calc(12px + var(--safe-b));
   display: grid;
   grid-template-columns: repeat(3, 64px);
-  grid-template-rows: repeat(2, 64px);
+  grid-template-rows: repeat(3, 64px);
   gap: 10px;
   pointer-events: auto;
 }
@@ -421,29 +421,34 @@ body {
 
 .touch-lock {
   grid-column: 3;
-  grid-row: 1 / span 2;
+  grid-row: 2 / span 2;
   border-radius: 32px;
   font-size: 15px;
 }
 
 .touch-fire {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 2;
 }
 
 .touch-roll {
   grid-column: 2;
-  grid-row: 2;
+  grid-row: 3;
 }
 
 .touch-boost {
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 2;
 }
 
 .touch-brake {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 3;
+}
+
+.touch-flare {
+  grid-column: 3;
+  grid-row: 1;
 }
 
 .touch-pause {
@@ -501,4 +506,156 @@ body {
   .menu-item {
     transition: none;
   }
+}
+
+/* ------------------------------------------------------------ retro style */
+body.retro #game {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+body.retro::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.18) 0 1px, transparent 1px 3px);
+}
+
+/* ------------------------------------------------------------- M3 screens */
+.screen.scroll {
+  max-height: 88vh;
+}
+
+.settings .menu-item {
+  font-size: 15px;
+  padding: 9px 16px;
+}
+
+.settings .menu {
+  max-width: 480px;
+}
+
+.jet-select {
+  min-width: min(380px, 80vw);
+}
+
+.jet-name {
+  font: italic 900 34px var(--font);
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+
+.jet-desc {
+  margin: 4px 0 14px;
+  color: var(--dim);
+  font-size: 14px;
+}
+
+.jet-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  align-items: center;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.stat-bar {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.stat-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--hot), var(--hot-2));
+}
+
+.name-entry .slots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: 6px 0 10px;
+}
+
+.name-entry .slots span {
+  width: 28px;
+  padding: 6px 0;
+  border-bottom: 3px solid rgba(255, 255, 255, 0.25);
+  font: italic 900 26px var(--font);
+}
+
+.name-entry .slots span.cur {
+  border-color: var(--hot-2);
+  color: var(--hot-2);
+  animation: blink 0.8s steps(2) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.board table {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.board td {
+  padding: 5px 8px;
+  text-align: left;
+  font-weight: 700;
+}
+
+.board td:nth-child(3) {
+  text-align: right;
+}
+
+.board td:first-child,
+.board td:last-child {
+  color: var(--dim);
+}
+
+.board tr.me td {
+  color: var(--hot-2);
+}
+
+.board h3 {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: var(--cyan);
+}
+
+.board-status {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--dim);
+}
+
+.update-toast button {
+  margin-left: 10px;
+  appearance: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: var(--hot);
+  color: var(--ink);
+  font-weight: 800;
+  cursor: pointer;
 }

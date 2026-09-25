@@ -18,10 +18,17 @@ import { Terrain } from './terrain';
 import { EntityRenderer, PlayerView, interpolate } from './entities';
 import { CameraRig } from './camera';
 import { SpeedLines } from './speedlines';
+import { CloudDeck } from './clouddeck';
 import { PostFX } from './post';
 import { createParticleSystems, type ParticleSystem } from './particles';
 import { Fx } from './fx';
 import { QUALITY, type QualityLevel, type QualitySettings } from './quality';
+import { RetroRenderer, SpriteBank } from './sprites';
+
+export type VisualStyle = 'modern' | 'retro';
+
+/** Retro mode renders at roughly this many vertical pixels, upscaled nearest-neighbour. */
+const RETRO_LINES = 288;
 
 /**
  * Owns the renderer and every visual system; draws the simulation with render
@@ -37,6 +44,7 @@ export class GameView {
   private readonly entities = new EntityRenderer();
   private readonly player: PlayerView;
   private readonly speedLines = new SpeedLines();
+  private readonly cloudDeck = new CloudDeck();
   private readonly post: PostFX;
   private readonly fxSys: ParticleSystem;
   private readonly smokeSys: ParticleSystem;
@@ -68,7 +76,13 @@ export class GameView {
     this.pmrem = new PMREMGenerator(this.renderer);
 
     this.env = new Environment(this.scene);
-    this.scene.add(this.ocean.mesh, this.terrain.group, this.entities.group, this.speedLines.mesh);
+    this.scene.add(
+      this.ocean.mesh,
+      this.terrain.group,
+      this.entities.group,
+      this.speedLines.mesh,
+      this.cloudDeck.layer.mesh,
+    );
     this.player = new PlayerView(this.entities.bodyMat);
     this.scene.add(this.player.group);
 
@@ -101,10 +115,35 @@ export class GameView {
     return this.quality.level;
   }
 
+  style: VisualStyle = 'modern';
+  private retro: RetroRenderer | null = null;
+
+  /** Switches between modern 3D and the retro sprite-scaling look. */
+  setStyle(style: VisualStyle): void {
+    this.style = style;
+    if (style === 'retro' && !this.retro) {
+      this.retro = new RetroRenderer(new SpriteBank(this.renderer));
+      this.scene.add(this.retro.group);
+    }
+    const retro = style === 'retro';
+    this.entities.group.visible = !retro;
+    if (this.retro) this.retro.group.visible = retro;
+    document.body.classList.toggle('retro', retro);
+    this.applyQuality(this.quality.level);
+  }
+
+  private pixelRatio(): number {
+    if (this.style === 'retro') {
+      const h = this.canvas.clientHeight || window.innerHeight;
+      return Math.min(1, RETRO_LINES / Math.max(1, h));
+    }
+    return Math.min(window.devicePixelRatio, this.quality.maxDpr);
+  }
+
   applyQuality(level: QualityLevel): void {
     this.quality = QUALITY[level];
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality.maxDpr));
-    this.post.applyQuality(this.quality);
+    this.renderer.setPixelRatio(this.pixelRatio());
+    this.post.applyQuality(this.quality, this.style === 'retro');
     this.ocean.setDetail(this.quality.waterDetail);
     this.terrain.setCloudsVisible(this.quality.clouds);
     this.fxSys.density = this.smokeSys.density = this.quality.particleDensity;
@@ -117,6 +156,7 @@ export class GameView {
     this.env.apply(p);
     this.ocean.applyPreset(p);
     this.terrain.applyPreset(p);
+    this.cloudDeck.applyPreset(p);
     this.renderer.toneMappingExposure = p.exposure;
     this.post.setBloomStrength(p.bloom);
     // Reflection environment from the sky only (cheap, regenerated per preset).
@@ -130,11 +170,14 @@ export class GameView {
 
   bind(sim: Sim): void {
     this.fx.bind(sim);
+    this.cloudDeck.bind(sim);
   }
 
   setStage(sim: Sim, stage: StageDef): void {
     this.setLighting(stage.lighting);
-    this.terrain.setStage(sim.rail, hashSeed(stage.id));
+    this.terrain.setStage(sim.rail, hashSeed(stage.id), stage.biome);
+    this.ocean.mesh.visible = stage.biome === 'ocean';
+    this.cloudDeck.reset();
     this.fxSys.clear();
     this.smokeSys.clear();
   }
@@ -142,6 +185,7 @@ export class GameView {
   resize(): void {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
+    this.renderer.setPixelRatio(this.pixelRatio());
     this.renderer.setSize(w, h, false);
     this.post.setSize(w, h);
   }
@@ -166,9 +210,16 @@ export class GameView {
     this.env.follow(cam.position);
     this.ocean.update(this.time, cam.position.x, cam.position.z, -railY, railX, dist);
     this.terrain.update(dist, railX, railY);
-    this.entities.update(sim, alpha);
     this.player.update(sim, alpha, this.time);
+    if (this.style === 'retro' && this.retro) {
+      const playerVisible = this.player.group.visible;
+      this.player.group.visible = false;
+      const f = this.env.fog;
+      this.retro.setFog(f.color, f.near, f.far);
+      this.retro.update(sim, alpha, cam, this.playerPos, playerVisible);
+    } else this.entities.update(sim, alpha);
     this.speedLines.update(frameDt, sim.speed, sim.cruiseSpeed, cam.position.x, cam.position.y);
+    this.cloudDeck.update(frameDt, sim.speed, this.playerPos.x, this.playerPos.y);
 
     this.fx.flashes = this.flashes;
     this.fx.frame(sim, alpha, frameDt, this.playerPos);

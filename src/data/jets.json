@@ -1,0 +1,29 @@
+{
+  "kestrel": {
+    "name": "KESTREL",
+    "desc": "Balanced all-rounder. 6-missile volleys.",
+    "model": "player",
+    "speed": 1,
+    "handling": 1,
+    "maxLocks": 6,
+    "armor": 4
+  },
+  "dart": {
+    "name": "DART",
+    "desc": "Fast and agile, light armour. 4-missile volleys.",
+    "model": "playerDart",
+    "speed": 1.1,
+    "handling": 1.2,
+    "maxLocks": 4,
+    "armor": 3
+  },
+  "manta": {
+    "name": "MANTA",
+    "desc": "Heavy striker, tough airframe. 8-missile volleys.",
+    "model": "playerManta",
+    "speed": 0.95,
+    "handling": 0.85,
+    "maxLocks": 8,
+    "armor": 5
+  }
+}

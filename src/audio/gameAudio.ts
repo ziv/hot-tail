@@ -27,6 +27,11 @@ export class GameAudio {
       ev.on('playerDeath', () => s.explosion('large', 0, 0)),
       ev.on('bossDefeated', () => s.explosion('huge', 0, 300)),
       ev.on('roll', (e) => s.roll(e.dir)),
+      ev.on('flare', () => s.flare()),
+      ev.on('loop', () => s.roll(0)),
+      ev.on('refuelStart', () => this.music.play('title')),
+      ev.on('refuelDone', () => s.jingle([72, 76, 79, 84], 0.1)),
+      ev.on('callout', (e) => this.speak(e.text)),
       ev.on('extraLife', () => s.extraLife()),
       ev.on('music', (e) => this.music.play(e.track)),
       ev.on('stageClear', () => {
@@ -38,6 +43,19 @@ export class GameAudio {
         s.jingle([76, 74, 72, 71, 69, 64, 57], 0.18, 'triangle');
       }),
     );
+  }
+
+  /** Optional synthesized voice for callouts (placeholder for recorded lines, H8). */
+  voice = false;
+
+  private speak(text: string): void {
+    if (!this.voice || typeof speechSynthesis === 'undefined') return;
+    const u = new SpeechSynthesisUtterance(text.replace(/—/g, ','));
+    u.rate = 1.15;
+    u.pitch = 0.9;
+    u.volume = this.engine.volumes.sfx * this.engine.volumes.master;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
   }
 
   unbind(): void {

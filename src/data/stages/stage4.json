@@ -1,0 +1,245 @@
+{
+  "id": "s4",
+  "index": 4,
+  "name": "DUNE SEA",
+  "subtitle": "Strike the desert air-defence belt",
+  "biome": "desert",
+  "lighting": "desertDay",
+  "cruise": 345,
+  "duration": 80,
+  "music": "desert",
+  "rail": [
+    [0, 0, 125],
+    [4000, -140, 115],
+    [8000, 120, 140],
+    [12000, 300, 120],
+    [16000, 60, 150],
+    [20000, -220, 115],
+    [24000, -40, 130],
+    [28000, 160, 120],
+    [45000, 0, 130]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "desert"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 4",
+      "sub": "DUNE SEA",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 3,
+      "formation": "v",
+      "spacing": 90,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 6,
+      "type": "callout",
+      "text": "Tank column on the ground. Lock them with missiles."
+    },
+    {
+      "t": 6.5,
+      "type": "wave",
+      "enemy": "tank",
+      "count": 5,
+      "formation": "column",
+      "x": -60,
+      "spacing": 70,
+      "variants": [
+        {
+          "x": 60
+        },
+        {
+          "formation": "line",
+          "spacing": 60
+        }
+      ]
+    },
+    {
+      "t": 10,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 3,
+      "formation": "line",
+      "spacing": 220
+    },
+    {
+      "t": 13,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "formation": "v",
+      "spacing": 45
+    },
+    {
+      "t": 17,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 2,
+      "formation": "line",
+      "spacing": 300
+    },
+    {
+      "t": 18,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 2,
+      "formation": "line",
+      "spacing": 160,
+      "params": {
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 23,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 2,
+      "formation": "line",
+      "spacing": 220,
+      "y": 0
+    },
+    {
+      "t": 27,
+      "type": "wave",
+      "enemy": "tank",
+      "count": 6,
+      "formation": "column",
+      "x": 80,
+      "spacing": 60
+    },
+    {
+      "t": 28,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 2,
+      "formation": "line",
+      "spacing": 300,
+      "x": -40
+    },
+    {
+      "t": 32,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "circle",
+      "params": {
+        "radius": 85,
+        "spin": 1.1
+      }
+    },
+    {
+      "t": 37,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 2,
+      "formation": "line",
+      "spacing": 180,
+      "y": 30
+    },
+    {
+      "t": 41,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 3,
+      "formation": "scatter",
+      "spacing": 180
+    },
+    {
+      "t": 44,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 4,
+      "formation": "line",
+      "spacing": 100,
+      "params": {
+        "weave": 40
+      }
+    },
+    {
+      "t": 48,
+      "type": "speed",
+      "value": 1.12
+    },
+    {
+      "t": 50,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 2,
+      "formation": "line",
+      "spacing": 80
+    },
+    {
+      "t": 56,
+      "type": "wave",
+      "enemy": "tank",
+      "count": 8,
+      "formation": "column",
+      "spacing": 55,
+      "variants": [
+        {
+          "x": -90
+        },
+        {
+          "x": 90
+        }
+      ]
+    },
+    {
+      "t": 58,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 4,
+      "formation": "line",
+      "spacing": 180
+    },
+    {
+      "t": 62,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "right",
+      "stagger": 0.2,
+      "params": {
+        "z": -950
+      }
+    },
+    {
+      "t": 66,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 1,
+      "y": 25
+    },
+    {
+      "t": 70,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 3,
+      "formation": "line",
+      "spacing": 220
+    },
+    {
+      "t": 72,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 5,
+      "formation": "v",
+      "spacing": 85,
+      "params": {
+        "breakaway": 1
+      }
+    }
+  ]
+}

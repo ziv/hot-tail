@@ -1,0 +1,212 @@
+{
+  "id": "s5",
+  "index": 5,
+  "name": "RED CANYON",
+  "subtitle": "Thread the canyon to the refuelling point",
+  "biome": "desert",
+  "lighting": "desertDusk",
+  "cruise": 350,
+  "duration": 82,
+  "music": "desert",
+  "rail": [
+    [0, 0, 110],
+    [3500, 220, 105],
+    [7000, -160, 110],
+    [10500, 280, 105],
+    [14000, -60, 120],
+    [17500, -300, 105],
+    [21000, 80, 110],
+    [24500, -120, 115],
+    [28000, 160, 110],
+    [45000, 0, 120]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "desert"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 5",
+      "sub": "RED CANYON",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "formation": "column",
+      "spacing": 50,
+      "params": {
+        "ampX": 60
+      }
+    },
+    {
+      "t": 7,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 4,
+      "formation": "column",
+      "spacing": 120
+    },
+    {
+      "t": 10,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 2,
+      "formation": "line",
+      "spacing": 180
+    },
+    {
+      "t": 14,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 4,
+      "formation": "v",
+      "spacing": 80,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 18,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 2,
+      "formation": "line",
+      "spacing": 200
+    },
+    {
+      "t": 19,
+      "type": "wave",
+      "enemy": "tank",
+      "count": 6,
+      "formation": "column",
+      "spacing": 55
+    },
+    {
+      "t": 24,
+      "type": "callout",
+      "text": "AWACS over the ridge \u2014 bring it down!"
+    },
+    {
+      "t": 24.5,
+      "type": "wave",
+      "enemy": "awacs",
+      "count": 1,
+      "y": 110
+    },
+    {
+      "t": 27,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "scatter",
+      "spacing": 70
+    },
+    {
+      "t": 31,
+      "type": "callout",
+      "text": "Bandits on your six!"
+    },
+    {
+      "t": 31.5,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 4,
+      "formation": "line",
+      "spacing": 60,
+      "params": {
+        "holdTime": 8
+      }
+    },
+    {
+      "t": 36,
+      "type": "loop"
+    },
+    {
+      "t": 41,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 3,
+      "formation": "line",
+      "spacing": 170,
+      "y": 30
+    },
+    {
+      "t": 45,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 3,
+      "formation": "scatter",
+      "spacing": 200
+    },
+    {
+      "t": 48,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 5,
+      "formation": "line",
+      "spacing": 90,
+      "params": {
+        "weave": 45,
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 52,
+      "type": "speed",
+      "value": 1.15
+    },
+    {
+      "t": 54,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 3,
+      "formation": "v",
+      "spacing": 150
+    },
+    {
+      "t": 58,
+      "type": "wave",
+      "enemy": "tank",
+      "count": 8,
+      "formation": "column",
+      "spacing": 50
+    },
+    {
+      "t": 59,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 3,
+      "formation": "line",
+      "spacing": 250
+    },
+    {
+      "t": 63,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 2,
+      "formation": "line",
+      "spacing": 260,
+      "y": 20,
+      "params": {
+        "holdTime": 9
+      }
+    },
+    {
+      "t": 72,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "circle",
+      "params": {
+        "radius": 90,
+        "spin": 1.3
+      }
+    }
+  ]
+}

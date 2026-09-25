@@ -1,6 +1,7 @@
 import { Quaternion, Vector3 } from 'three';
 import type { BaseEntity } from '@/core/ecs';
 import type { EnemyDef, SpawnSpec } from './defs';
+import type { PartDef } from './boss';
 
 /**
  * How an entity's position is integrated relative to the moving frame.
@@ -12,13 +13,24 @@ import type { EnemyDef, SpawnSpec } from './defs';
 export type Motion = 'player' | 'air' | 'ground';
 
 export type EntityKind =
-  'player' | 'enemy' | 'bullet' | 'ebullet' | 'missile' | 'emissile' | 'boss' | 'bossPart';
+  | 'player'
+  | 'enemy'
+  | 'bullet'
+  | 'ebullet'
+  | 'missile'
+  | 'emissile'
+  | 'boss'
+  | 'bossPart'
+  | 'flare'
+  | 'support';
 
 export interface GunState {
   timer: number;
   burstLeft: number;
   burstTimer: number;
 }
+
+export type Layer = 'air' | 'surface';
 
 export interface EnemyState {
   def: EnemyDef;
@@ -65,9 +77,11 @@ export interface BossPartState {
   role: 'turret' | 'engine' | 'core';
   fireTimer: number;
   destroyed: boolean;
+  def: PartDef;
 }
 
 export interface BossState {
+  id: string;
   name: string;
   phase: number;
   parts: Entity[];
@@ -98,6 +112,8 @@ export interface Entity extends BaseEntity {
   locks: number;
   /** Set on removal so renderers can tell a kill from a despawn. */
   killed: boolean;
+  /** Surface targets (ground/sea) are immune to the vulcan: missiles only. */
+  layer: Layer;
   enemy?: EnemyState;
   shot?: ShotState;
   missile?: MissileState;
@@ -126,6 +142,7 @@ export function createEntity(kind: EntityKind, model: string, motion: Motion): E
     lockable: false,
     locks: 0,
     killed: false,
+    layer: 'air',
   };
 }
 
@@ -142,6 +159,7 @@ export const Btn = {
   Roll: 4,
   Boost: 8,
   Brake: 16,
+  Flare: 32,
 } as const;
 
 export const EMPTY_INPUT: InputFrame = { x: 0, y: 0, buttons: 0 };
@@ -200,4 +218,10 @@ export interface SimEvents {
   explosion: { x: number; y: number; z: number; size: KillSize };
   extraLife: { lives: number };
   gameOver: { score: number };
+  flare: { x: number; y: number; z: number; decoyed: number };
+  loop: { duration: number };
+  refuelStart: Record<string, never>;
+  refuelDone: { bonus: number };
+  callout: { text: string };
+  clouds: { on: boolean };
 }

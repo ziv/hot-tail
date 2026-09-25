@@ -73,8 +73,21 @@ export class Director {
 
   private apply(sim: Sim, ev: StageEvent): void {
     switch (ev.type) {
-      case 'wave':
-        for (const m of expandWave(sim, ev)) this.pending.push({ at: this.time + m.delay, spec: m.spec });
+      case 'wave': {
+        // Seeded variant pick (F17): the base layout or one of its alternatives.
+        const pick = ev.variants?.length ? sim.rng.int(0, ev.variants.length) : 0;
+        const wave = pick > 0 ? { ...ev, ...ev.variants![pick - 1] } : ev;
+        for (const m of expandWave(sim, wave)) this.pending.push({ at: this.time + m.delay, spec: m.spec });
+        break;
+      }
+      case 'loop':
+        sim.startLoop();
+        break;
+      case 'clouds':
+        sim.events.emit('clouds', { on: ev.on });
+        break;
+      case 'callout':
+        sim.events.emit('callout', { text: ev.text });
         break;
       case 'banner':
         sim.events.emit('banner', { text: ev.text, sub: ev.sub ?? '', duration: ev.duration ?? 3 });

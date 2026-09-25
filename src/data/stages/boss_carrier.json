@@ -1,0 +1,80 @@
+{
+  "id": "x1",
+  "index": 12,
+  "name": "TRIDENT",
+  "subtitle": "Sink the carrier group",
+  "biome": "ocean",
+  "lighting": "sunset",
+  "cruise": 320,
+  "duration": 30,
+  "music": "ocean",
+  "mirror": false,
+  "rail": [
+    [0, 0, 125],
+    [6000, 120, 120],
+    [12000, -120, 125],
+    [18000, 0, 120],
+    [60000, 0, 120]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "ocean"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 12",
+      "sub": "TRIDENT",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 3,
+      "formation": "v",
+      "spacing": 90,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 7,
+      "type": "wave",
+      "enemy": "missileboat",
+      "count": 4,
+      "formation": "line",
+      "spacing": 160,
+      "params": {
+        "dir": -1
+      }
+    },
+    {
+      "t": 11,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 2,
+      "formation": "line",
+      "spacing": 200
+    },
+    {
+      "t": 16,
+      "type": "music",
+      "track": "boss"
+    },
+    {
+      "t": 16,
+      "type": "banner",
+      "text": "WARNING",
+      "sub": "CARRIER GROUP DEAD AHEAD",
+      "duration": 4
+    },
+    {
+      "t": 19,
+      "type": "boss",
+      "id": "carrier"
+    }
+  ]
+}

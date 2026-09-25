@@ -7,7 +7,16 @@
     "behaviour": "flyby",
     "speed": 560,
     "size": "medium",
-    "fire": [{ "pattern": "aimed", "interval": 1.7, "delay": 0.3, "burst": 3, "burstGap": 0.09, "speed": 720 }]
+    "fire": [
+      {
+        "pattern": "aimed",
+        "interval": 1.7,
+        "delay": 0.3,
+        "burst": 3,
+        "burstGap": 0.09,
+        "speed": 720
+      }
+    ]
   },
   "chaser": {
     "model": "chaser",
@@ -18,8 +27,19 @@
     "speed": 170,
     "size": "medium",
     "fire": [
-      { "pattern": "homing", "interval": 3.4, "delay": 1.4 },
-      { "pattern": "aimed", "interval": 2.3, "delay": 0.8, "burst": 4, "burstGap": 0.08, "speed": 760 }
+      {
+        "pattern": "homing",
+        "interval": 3.4,
+        "delay": 1.4
+      },
+      {
+        "pattern": "aimed",
+        "interval": 2.3,
+        "delay": 0.8,
+        "burst": 4,
+        "burstGap": 0.08,
+        "speed": 760
+      }
     ]
   },
   "drone": {
@@ -31,7 +51,15 @@
     "speed": 440,
     "size": "small",
     "fire": [
-      { "pattern": "spread", "interval": 3, "delay": 0.8, "count": 3, "spreadDeg": 9, "speed": 640, "chance": 0.3 }
+      {
+        "pattern": "spread",
+        "interval": 3,
+        "delay": 0.8,
+        "count": 3,
+        "spreadDeg": 9,
+        "speed": 640,
+        "chance": 0.3
+      }
     ]
   },
   "ace": {
@@ -43,8 +71,184 @@
     "speed": 640,
     "size": "large",
     "fire": [
-      { "pattern": "leading", "interval": 1.2, "delay": 1.2, "burst": 3, "burstGap": 0.07, "speed": 840 },
-      { "pattern": "homing", "interval": 4.8, "delay": 3 }
+      {
+        "pattern": "leading",
+        "interval": 1.2,
+        "delay": 1.2,
+        "burst": 3,
+        "burstGap": 0.07,
+        "speed": 840
+      },
+      {
+        "pattern": "homing",
+        "interval": 4.8,
+        "delay": 3
+      }
+    ]
+  },
+  "bomber": {
+    "model": "bomber",
+    "hp": 26,
+    "radius": 30,
+    "score": 15000,
+    "behaviour": "flyby",
+    "speed": 170,
+    "size": "large",
+    "params": {
+      "breakaway": 0,
+      "home": 0.25
+    },
+    "fire": [
+      {
+        "pattern": "aimed",
+        "interval": 1.5,
+        "delay": 0.8,
+        "burst": 4,
+        "burstGap": 0.08,
+        "speed": 700
+      }
+    ]
+  },
+  "gunship": {
+    "model": "gunship",
+    "hp": 18,
+    "radius": 18,
+    "score": 12000,
+    "behaviour": "evade",
+    "speed": 520,
+    "size": "medium",
+    "params": {
+      "dodge": 0,
+      "holdZ": -650,
+      "holdTime": 9
+    },
+    "fire": [
+      {
+        "pattern": "spread",
+        "interval": 2.2,
+        "delay": 1.2,
+        "count": 5,
+        "spreadDeg": 6,
+        "speed": 620
+      }
+    ]
+  },
+  "awacs": {
+    "model": "awacs",
+    "hp": 20,
+    "radius": 34,
+    "score": 50000,
+    "behaviour": "evade",
+    "speed": 420,
+    "size": "large",
+    "params": {
+      "dodge": 0,
+      "holdZ": -1500,
+      "holdTime": 7
+    },
+    "fire": []
+  },
+  "sam": {
+    "model": "sam",
+    "hp": 6,
+    "radius": 14,
+    "score": 6000,
+    "behaviour": "ground",
+    "speed": 0,
+    "size": "medium",
+    "layer": "surface",
+    "height": 4,
+    "fire": [
+      {
+        "pattern": "homing",
+        "interval": 3.6,
+        "delay": 0.8
+      }
+    ]
+  },
+  "aaa": {
+    "model": "aaa",
+    "hp": 5,
+    "radius": 12,
+    "score": 4000,
+    "behaviour": "ground",
+    "speed": 0,
+    "size": "medium",
+    "layer": "surface",
+    "height": 3,
+    "fire": [
+      {
+        "pattern": "flak",
+        "interval": 1.4,
+        "delay": 0.5,
+        "burst": 3,
+        "burstGap": 0.12,
+        "speed": 900
+      }
+    ]
+  },
+  "tank": {
+    "model": "tank",
+    "hp": 4,
+    "radius": 11,
+    "score": 3000,
+    "behaviour": "ground",
+    "speed": 40,
+    "size": "small",
+    "layer": "surface",
+    "height": 3,
+    "fire": [
+      {
+        "pattern": "aimed",
+        "interval": 2.6,
+        "delay": 1,
+        "speed": 650,
+        "chance": 0.6
+      }
+    ]
+  },
+  "destroyer": {
+    "model": "destroyer",
+    "hp": 30,
+    "radius": 46,
+    "score": 30000,
+    "behaviour": "ground",
+    "speed": 60,
+    "size": "large",
+    "layer": "surface",
+    "height": 6,
+    "fire": [
+      {
+        "pattern": "flak",
+        "interval": 1.6,
+        "delay": 0.6,
+        "burst": 4,
+        "burstGap": 0.1,
+        "speed": 900
+      },
+      {
+        "pattern": "homing",
+        "interval": 5,
+        "delay": 2
+      }
+    ]
+  },
+  "missileboat": {
+    "model": "missileboat",
+    "hp": 8,
+    "radius": 16,
+    "score": 8000,
+    "behaviour": "ground",
+    "speed": 150,
+    "size": "medium",
+    "layer": "surface",
+    "height": 3,
+    "fire": [
+      {
+        "pattern": "homing",
+        "interval": 3.4,
+        "delay": 1
+      }
     ]
   }
 }

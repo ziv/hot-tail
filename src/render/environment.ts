@@ -1,3 +1,4 @@
+import type { LightingId } from '@/sim/defs';
 import {
   AmbientLight,
   BackSide,
@@ -36,7 +37,7 @@ export interface LightingPreset {
   bloom: number;
 }
 
-export const PRESETS: Record<'day' | 'sunset' | 'dusk', LightingPreset> = {
+export const PRESETS: Record<LightingId, LightingPreset> = {
   day: {
     zenith: '#1f58b8',
     horizon: '#a6d0ee',
@@ -96,6 +97,46 @@ export const PRESETS: Record<'day' | 'sunset' | 'dusk', LightingPreset> = {
     cloudShade: '#4d3f66',
     exposure: 1.05,
     bloom: 0.85,
+  },
+  desertDay: {
+    zenith: '#3b6fc2',
+    horizon: '#e3cda6',
+    below: '#d6b88a',
+    fog: '#d9c29c',
+    fogNear: 900,
+    fogFar: 6400,
+    sunDir: [0.3, 0.72, -0.6],
+    sunColor: '#fff0d2',
+    sunIntensity: 2.9,
+    hemiSky: '#ffe8c4',
+    hemiGround: '#8a5a34',
+    hemiIntensity: 1.0,
+    waterDeep: '#0b3a5e',
+    waterShallow: '#1e7d9c',
+    cloudLit: '#ffffff',
+    cloudShade: '#d6c0a2',
+    exposure: 1.0,
+    bloom: 0.5,
+  },
+  desertDusk: {
+    zenith: '#28194a',
+    horizon: '#ff8748',
+    below: '#b0583a',
+    fog: '#c46d4f',
+    fogNear: 700,
+    fogFar: 5200,
+    sunDir: [-0.3, 0.08, -1],
+    sunColor: '#ff9a5a',
+    sunIntensity: 2.6,
+    hemiSky: '#ffb48a',
+    hemiGround: '#3a2030',
+    hemiIntensity: 0.85,
+    waterDeep: '#15213f',
+    waterShallow: '#5a4a66',
+    cloudLit: '#ffb890',
+    cloudShade: '#7a4a60',
+    exposure: 1.05,
+    bloom: 0.8,
   },
 };
 

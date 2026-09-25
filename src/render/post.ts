@@ -108,9 +108,10 @@ export class PostFX {
     this.applyQuality(quality);
   }
 
-  applyQuality(q: QualitySettings): void {
+  applyQuality(q: QualitySettings, retro = false): void {
     this.bloom.enabled = q.bloom;
-    this.fxaa.enabled = q.fxaa;
+    // FXAA would smear the deliberately chunky pixels of the retro style.
+    this.fxaa.enabled = q.fxaa && !retro;
   }
 
   setBloomStrength(v: number): void {

@@ -1,8 +1,14 @@
 import { Euler, Vector3 } from 'three';
 import { tuning } from './tuning';
 import { approach, easeInOut } from './math';
-import { Btn, createEntity, type Entity, type InputFrame, type Throttle } from './types';
+import { Btn, createEntity, EMPTY_INPUT, type Entity, type InputFrame, type Throttle } from './types';
+import { clamp } from './math';
+import type { JetDef } from './defs';
 import type { Sim } from './sim';
+
+/** Duration of the scripted loop manoeuvre (C5). */
+export const LOOP_DURATION = 2.8;
+export const FLARES_PER_LIFE = 3;
 
 export interface LockSlot {
   e: Entity;
@@ -44,10 +50,15 @@ export interface PlayerState {
   flickReleaseTime: number;
   flickPressTime: number;
   lastStickX: number;
+  maxArmor: number;
+  flares: number;
+  /** Seconds into a scripted loop, or -1. */
+  loopTime: number;
+  loopAngle: number;
 }
 
-export function createPlayer(): PlayerState {
-  const e = createEntity('player', 'player', 'player');
+export function createPlayer(jet: JetDef): PlayerState {
+  const e = createEntity('player', jet.model, 'player');
   e.alive = true;
   e.radius = tuning.player.radius;
   return {
@@ -61,7 +72,11 @@ export function createPlayer(): PlayerState {
     rollAngle: 0,
     rollCooldown: 0,
     invuln: 0,
-    armor: tuning.player.armor,
+    armor: jet.armor,
+    maxArmor: jet.armor,
+    flares: FLARES_PER_LIFE,
+    loopTime: -1,
+    loopAngle: 0,
     dead: false,
     respawnTimer: 0,
     aim: new Vector3(0, 0, -1),
@@ -103,6 +118,19 @@ export function updatePlayer(sim: Sim, input: InputFrame, dt: number): void {
   if (p.invuln > 0) p.invuln -= dt;
   if (p.rollCooldown > 0) p.rollCooldown -= dt;
 
+  // Scripted loop (C5): controls are locked while the jet pitches through 360°.
+  if (p.loopTime >= 0) {
+    p.loopTime += dt;
+    if (p.loopTime >= LOOP_DURATION) {
+      p.loopTime = -1;
+      p.loopAngle = 0;
+    } else p.loopAngle = Math.PI * 2 * easeInOut(p.loopTime / LOOP_DURATION);
+    input = EMPTY_INPUT;
+  }
+
+  // Flares (D7)
+  if ((input.buttons & Btn.Flare) !== 0 && (sim.prevButtons & Btn.Flare) === 0) sim.dropFlares();
+
   // Throttle (C3).
   const boost = (input.buttons & Btn.Boost) !== 0;
   const brake = (input.buttons & Btn.Brake) !== 0;
@@ -140,9 +168,10 @@ export function updatePlayer(sim: Sim, input: InputFrame, dt: number): void {
   const sk = approach(f.stickSmoothing, dt);
   p.stickX += (input.x - p.stickX) * sk;
   p.stickY += (input.y - p.stickY) * sk;
-  const rk = approach(f.response, dt);
-  e.vel.x += (input.x * f.maxLatSpeed - e.vel.x) * rk;
-  e.vel.y += (input.y * f.maxVertSpeed - e.vel.y) * rk;
+  const handling = sim.jet.handling;
+  const rk = approach(f.response * handling, dt);
+  e.vel.x += (input.x * f.maxLatSpeed * handling - e.vel.x) * rk;
+  e.vel.y += (input.y * f.maxVertSpeed * handling - e.vel.y) * rk;
   e.pos.x += (e.vel.x + rollPush) * dt;
   e.pos.y += e.vel.y * dt;
   if (e.pos.x > f.envelopeX) {
@@ -162,9 +191,10 @@ export function updatePlayer(sim: Sim, input: InputFrame, dt: number): void {
 
   // Aim leads the stick so the reticle can sweep faster than the jet moves.
   p.aim.set(p.stickX * f.aimYaw, p.stickY * f.aimPitch, -1).normalize();
+  if (sim.options.aimAssist) applyAimAssist(sim);
   p.bank = -p.stickX * f.bankMax;
   p.pitch = p.stickY * f.pitchVisual;
-  _euler.set(p.pitch, -p.stickX * 0.16, p.bank + p.rollAngle);
+  _euler.set(p.pitch + p.loopAngle, -p.stickX * 0.16, p.bank + p.rollAngle);
   e.rot.setFromEuler(_euler);
 }
 
@@ -205,10 +235,39 @@ function startRoll(sim: Sim, dir: number): void {
   sim.events.emit('roll', { dir });
 }
 
+const _to = new Vector3();
+
+/** Aim assist (C9): bends the aim halfway toward the best target near the reticle. */
+function applyAimAssist(sim: Sim): void {
+  const p = sim.player;
+  let best = 0.13;
+  let bx = 0;
+  let by = 0;
+  let bz = 0;
+  for (const t of sim.targets.items) {
+    if (!t.alive || !t.lockable) continue;
+    _to.subVectors(t.pos, p.e.pos);
+    const d = _to.length();
+    if (d < 150 || d > 1900) continue;
+    const ang = Math.acos(clamp(_to.dot(p.aim) / d, -1, 1));
+    if (ang < best) {
+      best = ang;
+      bx = _to.x / d;
+      by = _to.y / d;
+      bz = _to.z / d;
+    }
+  }
+  if (best < 0.13) p.aim.set(p.aim.x + bx, p.aim.y + by, p.aim.z + bz).normalize();
+}
+
 export function isPlayerImmune(sim: Sim): boolean {
   const p = sim.player;
   return (
-    p.dead || p.invuln > 0 || sim.cheats.invincible || (p.rollTime >= 0 && p.rollTime < tuning.roll.immunity)
+    p.dead ||
+    p.loopTime >= 0 ||
+    p.invuln > 0 ||
+    sim.cheats.invincible ||
+    (p.rollTime >= 0 && p.rollTime < tuning.roll.immunity)
   );
 }
 
@@ -236,6 +295,8 @@ function killPlayer(sim: Sim): void {
   for (const l of p.locks) if (l.e.alive && l.e.id === l.id) l.e.locks = Math.max(0, l.e.locks - 1);
   p.locks.length = 0;
   p.volley.length = 0;
+  p.loopTime = -1;
+  p.loopAngle = 0;
   sim.score.lives--;
   sim.score.stats.deaths++;
   sim.score.chain = 0;
@@ -251,7 +312,9 @@ function respawn(sim: Sim): void {
   const p = sim.player;
   const e = p.e;
   p.dead = false;
-  p.armor = tuning.player.armor;
+  p.armor = p.maxArmor;
+  p.flares = FLARES_PER_LIFE;
+  p.missiles = Math.max(p.missiles, 50);
   p.invuln = tuning.player.invuln;
   p.stickX = p.stickY = 0;
   e.pos.set(0, 0, 0);

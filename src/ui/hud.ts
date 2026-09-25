@@ -10,11 +10,30 @@ import { tuning } from '@/sim/tuning';
  * threats, and every warning also carries text or a shape (never colour alone).
  */
 export const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const CYAN = '#7fe9ff';
+export type HudPalette = 'default' | 'deutan' | 'tritan';
+
+const PALETTES: Record<HudPalette, { cyan: string; warm: string; red: string; dim: string }> = {
+  default: { cyan: '#7fe9ff', warm: '#ffb020', red: '#ff4a3a', dim: 'rgba(127, 233, 255, 0.35)' },
+  // Red-green deficiencies (deuteranopia/protanopia): blue vs yellow, white flashes.
+  deutan: { cyan: '#5aa9ff', warm: '#ffd000', red: '#ffffff', dim: 'rgba(90, 169, 255, 0.4)' },
+  // Blue-yellow deficiency (tritanopia): pink vs red.
+  tritan: { cyan: '#ff9ecf', warm: '#ff3b30', red: '#ffffff', dim: 'rgba(255, 158, 207, 0.4)' },
+};
+
+let CYAN = PALETTES.default.cyan;
 const WHITE = '#ffffff';
-const WARM = '#ffb020';
-const RED = '#ff4a3a';
-const DIM = 'rgba(127, 233, 255, 0.35)';
+let WARM = PALETTES.default.warm;
+let RED = PALETTES.default.red;
+let DIM = PALETTES.default.dim;
+
+/** Colour-blind friendly HUD palettes (K7). Shapes and text still carry meaning. */
+export function setHudPalette(name: HudPalette): void {
+  const p = PALETTES[name] ?? PALETTES.default;
+  CYAN = p.cyan;
+  WARM = p.warm;
+  RED = p.red;
+  DIM = p.dim;
+}
 
 interface Popup {
   x: number;
@@ -46,7 +65,12 @@ export class Hud {
   private offs: (() => void)[] = [];
   private time = 0;
   private displayScore = 0;
+  private subtitle: { text: string; age: number } | null = null;
+  private reticle = { x: 0, y: 0, size: 14 };
   visible = true;
+  /** Accessibility: show callouts as subtitles, and scale the status HUD. */
+  subtitles = true;
+  scale = 1;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
@@ -89,6 +113,12 @@ export class Hud {
         (e) => (this.message = { text: e.phase === 3 ? 'CORE EXPOSED' : 'ARMOR BREACHED', age: 0 }),
       ),
       sim.events.on('playerRespawn', () => (this.message = { text: 'READY', age: 0 })),
+      sim.events.on('callout', (e) => (this.subtitle = { text: e.text, age: 0 })),
+      sim.events.on(
+        'flare',
+        (e) => (this.message = { text: e.decoyed ? 'MISSILES DECOYED' : 'FLARES', age: 1 }),
+      ),
+      sim.events.on('loop', () => (this.message = { text: 'LOOP!', age: 0 })),
     );
   }
 
@@ -121,9 +151,101 @@ export class Hud {
     if (!p.dead) this.drawReticle(sim, cam, playerPos);
     this.drawThreats(sim, cam, alpha);
     this.drawPopups(sim, cam, dt);
+    // Status widgets honour the HUD scale by drawing in a shrunken virtual screen.
+    const w = this.w;
+    const h = this.h;
+    const k = this.scale;
+    this.w = w / k;
+    this.h = h / k;
+    c.setTransform(this.dpr * k, 0, 0, this.dpr * k, 0, 0);
     this.drawStatus(sim, dt);
+    this.drawRadar(sim);
     this.drawBoss(sim);
+    this.drawSubtitle(dt);
+    this.w = w;
+    this.h = h;
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.drawBanner(dt);
+  }
+
+  /** Radar / threat scope (G4): top-down view around the jet. */
+  private drawRadar(sim: Sim): void {
+    const c = this.ctx;
+    const R = Math.max(38, Math.min(56, Math.min(this.w, this.h) * 0.075));
+    const cx = this.w / 2;
+    const cy = this.h - R - Math.max(14, Math.min(this.w, this.h) * 0.025) - (this.touchSafe ? 120 : 0);
+    const range = 2800;
+    c.save();
+    c.fillStyle = 'rgba(0, 12, 24, 0.45)';
+    c.strokeStyle = DIM;
+    c.lineWidth = 1;
+    c.beginPath();
+    c.arc(cx, cy, R, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    c.beginPath();
+    c.arc(cx, cy, R / 2, 0, Math.PI * 2);
+    c.moveTo(cx - R, cy);
+    c.lineTo(cx + R, cy);
+    c.moveTo(cx, cy - R);
+    c.lineTo(cx, cy + R);
+    c.stroke();
+    c.clip();
+    const plot = (e: Entity, size: number, color: string, shape: 'tri' | 'sq' | 'dot') => {
+      const x = cx + (e.pos.x / range) * R;
+      const y = cy + (e.pos.z / range) * R;
+      c.fillStyle = color;
+      if (shape === 'dot') {
+        c.beginPath();
+        c.arc(x, y, size, 0, Math.PI * 2);
+        c.fill();
+      } else if (shape === 'sq') c.fillRect(x - size, y - size, size * 2, size * 2);
+      else {
+        c.beginPath();
+        c.moveTo(x, y - size * 1.3);
+        c.lineTo(x + size, y + size);
+        c.lineTo(x - size, y + size);
+        c.closePath();
+        c.fill();
+      }
+    };
+    for (const e of sim.enemies.items) if (e.alive) plot(e, 2.5, WHITE, e.layer === 'surface' ? 'sq' : 'tri');
+    for (const b of sim.bosses.items) if (b.alive) plot(b, 6, WHITE, 'sq');
+    const blink = Math.floor(this.time * 8) % 2 === 0;
+    for (const m of sim.missiles.items)
+      if (m.alive && m.kind === 'emissile' && m.missile!.tracking && blink) plot(m, 2.5, WARM, 'dot');
+    c.restore();
+    // Player marker
+    c.fillStyle = CYAN;
+    c.beginPath();
+    c.moveTo(cx, cy - 5);
+    c.lineTo(cx + 4, cy + 4);
+    c.lineTo(cx - 4, cy + 4);
+    c.closePath();
+    c.fill();
+  }
+
+  private drawSubtitle(dt: number): void {
+    const st = this.subtitle;
+    if (!st) return;
+    st.age += dt;
+    if (st.age > 3.5) {
+      this.subtitle = null;
+      return;
+    }
+    if (!this.subtitles) return;
+    const c = this.ctx;
+    const a = Math.min(1, st.age / 0.2, (3.5 - st.age) / 0.4);
+    c.globalAlpha = a;
+    c.font = `600 ${Math.round(Math.min(18, this.w * 0.035))}px ${FONT}`;
+    const tw = c.measureText(st.text).width;
+    const y = this.h * 0.8;
+    c.fillStyle = 'rgba(0, 10, 20, 0.6)';
+    c.fillRect(this.w / 2 - tw / 2 - 12, y - 20, tw + 24, 30);
+    c.fillStyle = WHITE;
+    c.textAlign = 'center';
+    c.fillText(st.text, this.w / 2, y);
+    c.globalAlpha = 1;
   }
 
   private drawReticle(sim: Sim, cam: PerspectiveCamera, playerPos: Vector3): void {
@@ -133,6 +255,9 @@ export class Hud {
     const r = this.project(_w, cam);
     const locking = (sim.input.buttons & 2) !== 0;
     const size = Math.max(14, Math.min(this.w, this.h) * 0.028);
+    this.reticle.x = r.x;
+    this.reticle.y = r.y;
+    this.reticle.size = size;
     c.strokeStyle = CYAN;
     c.lineWidth = 2;
     c.beginPath();
@@ -229,6 +354,15 @@ export class Hud {
         if (!m.alive || m.kind !== 'emissile' || !m.missile!.tracking) continue;
         _v.lerpVectors(m.prev, m.pos, alpha);
         this.edgeArrow(_v, cam, WARM, m.pos.z > 0 ? 'BEHIND' : '');
+        // Threat ring: an arc on the reticle pointing at the incoming missile.
+        const s = this.project(_v, cam);
+        let a = Math.atan2(s.y - this.reticle.y, s.x - this.reticle.x);
+        if (s.behind) a = Math.atan2(Math.abs(s.y - this.reticle.y) + this.h, this.reticle.x - s.x);
+        c.strokeStyle = WARM;
+        c.lineWidth = 4;
+        c.beginPath();
+        c.arc(this.reticle.x, this.reticle.y, this.reticle.size * 2.3, a - 0.3, a + 0.3);
+        c.stroke();
       }
     }
     // Enemies behind (E9) and off-screen ahead
@@ -236,7 +370,7 @@ export class Hud {
       if (!e.alive) continue;
       _v.lerpVectors(e.prev, e.pos, alpha);
       if (e.pos.z > 20) {
-        this.edgeArrow(_v, cam, WARM, 'BANDIT');
+        if (e.layer === 'air') this.edgeArrow(_v, cam, WARM, 'BANDIT');
       } else if (e.pos.z < -300 && e.pos.z > -1800) {
         const s = this.project(_v, cam);
         if (s.x < 0 || s.x > this.w || s.y < 0 || s.y > this.h) this.edgeArrow(_v, cam, DIM, '');
@@ -364,7 +498,7 @@ export class Hud {
     c.font = `700 11px ${FONT}`;
     c.fillStyle = CYAN;
     c.fillText('ARMOR', pad, bottom - 14);
-    for (let i = 0; i < tuning.player.armor; i++) {
+    for (let i = 0; i < p.maxArmor; i++) {
       const on = i < p.armor;
       c.fillStyle = on ? (p.armor <= 1 ? WARM : CYAN) : 'rgba(255,255,255,0.15)';
       c.fillRect(pad + 48 + i * 16, bottom - 22, 12, 9);
@@ -395,7 +529,7 @@ export class Hud {
     c.font = `700 11px ${FONT}`;
     c.fillStyle = CYAN;
     c.fillText('MSL', this.w - pad, bottom - (small ? 22 : 28));
-    for (let i = 0; i < tuning.lock.maxLocks; i++) {
+    for (let i = 0; i < sim.jet.maxLocks; i++) {
       const x = this.w - pad - (small ? 50 : 64) - i * 14;
       const y = bottom - 8;
       c.save();
@@ -410,9 +544,32 @@ export class Hud {
       c.strokeRect(-4, -4, 8, 8);
       c.restore();
     }
+    // Flares
+    c.font = `700 11px ${FONT}`;
+    c.fillStyle = CYAN;
+    c.fillText('FLR', this.w - pad - (small ? 50 : 64) - sim.jet.maxLocks * 14 - 8, bottom - 4);
+    for (let i = 0; i < 3; i++) {
+      c.fillStyle = i < p.flares ? WHITE : 'rgba(255,255,255,0.15)';
+      c.beginPath();
+      c.arc(this.w - pad - 8 - i * 11, bottom - (small ? 38 : 46), 3.5, 0, Math.PI * 2);
+      c.fill();
+    }
     if (p.rollCooldown > 0) {
       c.fillStyle = DIM;
       c.fillRect(this.w - pad - 60, bottom + 6, 60 * (1 - p.rollCooldown / tuning.roll.cooldown), 3);
+    }
+
+    // Tanker refuel status
+    if (sim.state === 'refuel') {
+      c.textAlign = 'center';
+      c.fillStyle = WHITE;
+      c.font = `italic 800 26px ${FONT}`;
+      c.fillText('REFUELING', this.w / 2, this.h * 0.3);
+      const bw = Math.min(260, this.w * 0.5);
+      c.fillStyle = 'rgba(255,255,255,0.15)';
+      c.fillRect(this.w / 2 - bw / 2, this.h * 0.3 + 12, bw, 6);
+      c.fillStyle = CYAN;
+      c.fillRect(this.w / 2 - bw / 2, this.h * 0.3 + 12, (bw * p.missiles) / tuning.missile.ammo, 6);
     }
 
     // Transient message

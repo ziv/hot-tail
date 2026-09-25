@@ -19,6 +19,7 @@ export function controlsHtml(): string {
         <tr><td>Lock &amp; missiles</td><td>Hold K / X / Right mouse, release to fire</td></tr>
         <tr><td>Barrel roll</td><td>L / C — or double-tap a direction</td></tr>
         <tr><td>Afterburner / brake</td><td>Shift or E / Q or Z</td></tr>
+        <tr><td>Flares</td><td>R / V</td></tr>
         <tr><td>Pause · Fullscreen</td><td>Esc / P · F</td></tr>
       </table>
     </div>
@@ -30,10 +31,13 @@ export function controlsHtml(): string {
         <tr><td>Lock &amp; missiles</td><td>X / RB (hold, release)</td></tr>
         <tr><td>Barrel roll</td><td>B / LB</td></tr>
         <tr><td>Afterburner / brake</td><td>RT / LT</td></tr>
+        <tr><td>Flares</td><td>Y</td></tr>
         <tr><td>Pause</td><td>Start</td></tr>
       </table>
       <h3>Touch</h3>
-      <p>Left thumb steers. <b>AUTO</b> toggles auto-fire, <b>MSL</b> hold to lock, <b>ROLL</b>, <b>BOOST</b>, <b>BRAKE</b>.</p>
+      <p>Left thumb steers. <b>AUTO</b> toggles auto-fire, <b>MSL</b> hold to lock, <b>ROLL</b>, <b>BOOST</b>, <b>BRAKE</b>, <b>FLARE</b>.</p>
+      <h3>Tips</h3>
+      <p>Ground and sea targets can only be hit with missiles. Flares decoy up to three incoming missiles (3 per life). Rebind keys and turn on aim assist, toggle controls or colour-blind HUD palettes in Settings.</p>
     </div>
   </div>`;
 }

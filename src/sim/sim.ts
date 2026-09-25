@@ -8,11 +8,27 @@ import { Director } from './director';
 import { Rail, type RailSample } from './rail';
 import { ScoreKeeper } from './score';
 import { tuning } from './tuning';
-import { createPlayer, damagePlayer, isPlayerImmune, updatePlayer, type PlayerState } from './player';
+import {
+  createPlayer,
+  damagePlayer,
+  isPlayerImmune,
+  LOOP_DURATION,
+  updatePlayer,
+  type PlayerState,
+} from './player';
 import { updatePlayerWeapons, updateMissile } from './weapons';
 import { updateEnemies } from './enemies';
 import { onBossPartDestroyed, syncBossParts, updateBosses } from './boss';
-import type { StageDef } from './defs';
+import { approach, clamp } from './math';
+import {
+  DIFFICULTY,
+  JETS,
+  type Difficulty,
+  type DifficultyDef,
+  type JetDef,
+  type JetId,
+  type StageDef,
+} from './defs';
 import {
   createEntity,
   EMPTY_INPUT,
@@ -23,7 +39,27 @@ import {
   type SimEvents,
 } from './types';
 
-export type SimState = 'playing' | 'cleared' | 'gameover';
+export type SimState = 'playing' | 'cleared' | 'gameover' | 'refuel';
+
+export interface SimOptions {
+  difficulty: Difficulty;
+  jet: JetId;
+  aimAssist: boolean;
+  autoFire: boolean;
+  /** Ease enemy fire after two deaths in one stage. */
+  dynamicDifficulty: boolean;
+}
+
+export const DEFAULT_SIM_OPTIONS: SimOptions = {
+  difficulty: 'normal',
+  jet: 'kestrel',
+  aimAssist: false,
+  autoFire: false,
+  dynamicDifficulty: true,
+};
+
+/** Refuel sequence timings (F15). */
+const REFUEL = { approach: 3.5, dock: 4, depart: 2.5, bonus: 50000 };
 
 export interface Cheats {
   invincible: boolean;
@@ -43,6 +79,13 @@ export class Sim {
   readonly score: ScoreKeeper;
   readonly player: PlayerState;
   readonly cheats: Cheats = { invincible: false, infiniteMissiles: false };
+  readonly options: SimOptions;
+  readonly diff: DifficultyDef;
+  readonly jet: JetDef;
+  /** Seeded per-stage left/right mirroring of wave layouts (F17). */
+  mirror = false;
+  /** Refuel sequence state; the tanker is a 'support' entity. */
+  refuel: { time: number; tanker: Entity | null; done: boolean } = { time: 0, tanker: null, done: false };
 
   readonly enemies = this.world.query((e) => e.kind === 'enemy');
   readonly targets = this.world.query(
@@ -53,6 +96,7 @@ export class Sim {
   readonly missiles = this.world.query((e) => e.kind === 'missile' || e.kind === 'emissile');
   readonly bosses = this.world.query((e) => e.kind === 'boss');
   readonly bossParts = this.world.query((e) => e.kind === 'bossPart');
+  readonly flares = this.world.query((e) => e.kind === 'flare');
 
   tick = 0;
   time = 0;
@@ -81,14 +125,23 @@ export class Sim {
   private readonly hash = new SpatialHash<Entity>(160);
   private readonly railDelta = new Vector3();
 
-  constructor(seed = 1) {
+  constructor(seed = 1, options: Partial<SimOptions> = {}) {
     this.rng = new Rng(seed);
+    this.options = { ...DEFAULT_SIM_OPTIONS, ...options };
+    this.diff = DIFFICULTY[this.options.difficulty];
+    this.jet = JETS[this.options.jet];
     this.score = new ScoreKeeper(tuning.player.lives);
-    this.player = createPlayer();
+    this.player = createPlayer(this.jet);
   }
 
   get cruiseSpeed(): number {
     return this.cruise * this.cruiseScale;
+  }
+
+  /** Enemy fire-rate multiplier: difficulty plus dynamic easing. */
+  get fireRateScale(): number {
+    const eased = this.options.dynamicDifficulty && this.score.stats.deaths >= 2 ? 0.8 : 1;
+    return this.diff.fireRate * eased;
   }
 
   loadStage(def: StageDef): void {
@@ -100,14 +153,15 @@ export class Sim {
     this.prevDist = 0;
     this.rail.sample(0, this.railNow);
     this.rail.sample(0, this.railPrev);
-    this.cruise = def.cruise;
+    this.cruise = def.cruise * this.jet.speed;
     this.cruiseScale = 1;
-    this.speed = def.cruise;
+    this.speed = this.cruise;
     this.state = 'playing';
+    this.mirror = def.mirror !== false && this.rng.chance(0.5);
     this.score.resetStage();
     const p = this.player;
-    p.missiles = tuning.missile.ammo;
-    p.armor = tuning.player.armor;
+    // Missiles carry over between stages; the tanker refuel restocks them.
+    p.armor = p.maxArmor;
     p.locks.length = 0;
     p.volley.length = 0;
     if (!p.dead) {
@@ -137,6 +191,7 @@ export class Sim {
     this.railPrev.y = this.railNow.y;
 
     if (this.state === 'playing') this.director?.update(this, dt);
+    if (this.state === 'refuel') input = this.updateRefuel(dt);
 
     updatePlayer(this, input, dt);
     this.speed = this.cruiseSpeed * this.player.speedFactor;
@@ -196,6 +251,101 @@ export class Sim {
     if (e.motion === 'air') out.z += this.speed - this.cruiseSpeed;
     else if (e.motion === 'ground') out.addScaledVector(this.railDelta, -1 / TICK_DT);
     return out;
+  }
+
+  /** Flares (D7): decoy up to three tracking missiles. */
+  dropFlares(): void {
+    const p = this.player;
+    if (p.dead || p.flares <= 0) return;
+    p.flares--;
+    const decoys: Entity[] = [];
+    for (let i = 0; i < 3; i++) {
+      const f = this.spawn('flare', 'flare', 'air');
+      f.pos.copy(p.e.pos);
+      f.pos.y -= 2;
+      f.prev.copy(f.pos);
+      f.vel.set((i - 1) * 70, -45 - i * 10, 60);
+      f.life = 2.4;
+      decoys.push(f);
+    }
+    const tracking = this.enemyShots.items
+      .filter((m) => m.alive && m.kind === 'emissile' && m.missile!.tracking)
+      .sort((a, b) => a.pos.distanceToSquared(p.e.pos) - b.pos.distanceToSquared(p.e.pos))
+      .slice(0, 3);
+    tracking.forEach((m, i) => {
+      m.missile!.tracking = false;
+      m.missile!.target = decoys[i];
+      m.missile!.targetId = decoys[i].id;
+    });
+    this.events.emit('flare', { x: p.e.pos.x, y: p.e.pos.y, z: p.e.pos.z, decoyed: tracking.length });
+  }
+
+  /** Scripted loop manoeuvre (C5): shakes off tail-chasers, who end up in front. */
+  startLoop(): void {
+    const p = this.player;
+    if (p.dead || p.loopTime >= 0) return;
+    p.loopTime = 0;
+    p.rollTime = -1;
+    p.rollAngle = 0;
+    for (const e of this.enemies.items) {
+      const s = e.enemy!;
+      if (!e.alive || s.spec.behaviour !== 'pursuit' || s.phase >= 3) continue;
+      s.phase = 3;
+      s.phaseTime = 0;
+      e.pos.z = -320 - this.rng.range(0, 260);
+      e.pos.y += 25;
+      e.prev.copy(e.pos);
+      e.vel.z = -40;
+    }
+    this.events.emit('loop', { duration: LOOP_DURATION });
+    this.events.emit('callout', { text: 'Pull up — loop!' });
+  }
+
+  /** Tanker refuel (F15): restocks missiles and armour, then awards a bonus. */
+  startRefuel(): void {
+    this.clearWorld();
+    this.state = 'refuel';
+    const t = this.spawn('support', 'tanker', 'player');
+    t.pos.set(0, 260, -1400);
+    t.prev.copy(t.pos);
+    this.refuel = { time: 0, tanker: t, done: false };
+    this.events.emit('refuelStart', {});
+    this.events.emit('callout', { text: 'Tanker ahead. Hold steady for refuelling.' });
+  }
+
+  private readonly refuelInput: InputFrame = { x: 0, y: 0, buttons: 0 };
+
+  private updateRefuel(dt: number): InputFrame {
+    const r = this.refuel;
+    const t = r.tanker!;
+    r.time += dt;
+    const p = this.player;
+    const docked = r.time > REFUEL.approach && r.time < REFUEL.approach + REFUEL.dock;
+    if (r.time < REFUEL.approach + REFUEL.dock) {
+      // Tanker settles just ahead of and above the jet.
+      const k = approach(1.4, dt);
+      t.vel.set(((0 - t.pos.x) * k) / dt, ((40 - t.pos.y) * k) / dt, ((-110 - t.pos.z) * k) / dt);
+    } else {
+      t.vel.y += 60 * dt;
+      t.vel.z -= 260 * dt;
+    }
+    if (docked && this.tick % 2 === 0 && p.missiles < tuning.missile.ammo) p.missiles++;
+    if (docked) p.armor = p.maxArmor;
+    if (!r.done && r.time >= REFUEL.approach + REFUEL.dock + REFUEL.depart) {
+      r.done = true;
+      p.missiles = tuning.missile.ammo;
+      this.world.remove(t);
+      r.tanker = null;
+      this.addScore(REFUEL.bonus);
+      this.state = 'cleared';
+      this.events.emit('refuelDone', { bonus: REFUEL.bonus });
+    }
+    // Autopilot: centre the jet under the boom.
+    const pe = p.e.pos;
+    this.refuelInput.x = clamp(-pe.x / 40, -1, 1);
+    this.refuelInput.y = clamp(-pe.y / 30, -1, 1);
+    this.refuelInput.buttons = 0;
+    return this.refuelInput;
   }
 
   /** Applies damage from the player to a target; handles kills and scoring. */
@@ -325,6 +475,8 @@ export class Sim {
       for (const c of cands) {
         if (!c.alive) continue;
         if (isMissile && c.kind === 'emissile') continue;
+        // Surface targets are missile-only (D10).
+        if (!isMissile && c.layer === 'surface') continue;
         if (lockTarget && c !== lockTarget) continue;
         const t = sweptSpheres(s.prev, s.pos, c.prev, c.pos, c.radius + extra);
         if (t >= 0 && t < bestT) {
@@ -359,11 +511,11 @@ export class Sim {
 
     // Enemy bodies vs player.
     for (const e of this.enemies.items) {
-      if (!e.alive) continue;
+      if (!e.alive || e.layer === 'surface') continue;
       const t = sweptSpheres(e.prev, e.pos, pe.prev, pe.pos, e.radius * 0.8 + tuning.player.radius);
       if (t < 0 || immune) continue;
       this.damage(e, 20);
-      damagePlayer(this, tuning.player.armor);
+      damagePlayer(this, p.maxArmor);
       if (p.dead) return;
     }
   }

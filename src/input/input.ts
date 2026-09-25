@@ -8,7 +8,21 @@ import { TouchControls } from './touch';
  * gamepad and touch, producing one InputFrame per tick plus menu navigation.
  */
 export type Action =
-  'up' | 'down' | 'left' | 'right' | 'fire' | 'lock' | 'roll' | 'boost' | 'brake' | 'pause';
+  'up' | 'down' | 'left' | 'right' | 'fire' | 'lock' | 'roll' | 'boost' | 'brake' | 'flare' | 'pause';
+
+export const ACTION_LABELS: Record<Action, string> = {
+  up: 'Climb',
+  down: 'Dive',
+  left: 'Left',
+  right: 'Right',
+  fire: 'Vulcan',
+  lock: 'Lock / missiles',
+  roll: 'Barrel roll',
+  boost: 'Afterburner',
+  brake: 'Air-brake',
+  flare: 'Flares',
+  pause: 'Pause',
+};
 export type NavAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back';
 
 export const DEFAULT_BINDINGS: Record<Action, string[]> = {
@@ -21,6 +35,7 @@ export const DEFAULT_BINDINGS: Record<Action, string[]> = {
   roll: ['KeyL', 'KeyC'],
   boost: ['ShiftLeft', 'ShiftRight', 'KeyE'],
   brake: ['KeyQ', 'KeyZ'],
+  flare: ['KeyR', 'KeyV'],
   pause: ['Escape', 'KeyP'],
 };
 
@@ -60,13 +75,26 @@ export interface InputSettings {
   invertY: boolean;
   autoFire: boolean;
   mouseSensitivity: number;
+  /** Accessibility: press once to start/stop instead of holding (K7). */
+  lockToggle: boolean;
+  boostToggle: boolean;
 }
 
 export type InputSource = 'keyboard' | 'mouse' | 'gamepad' | 'touch';
 
 export class InputManager {
   readonly bindings: Record<Action, string[]> = structuredClone(DEFAULT_BINDINGS);
-  readonly settings: InputSettings = { invertY: false, autoFire: false, mouseSensitivity: 1 };
+  readonly settings: InputSettings = {
+    invertY: false,
+    autoFire: false,
+    mouseSensitivity: 1,
+    lockToggle: false,
+    boostToggle: false,
+  };
+  private rawPrev = 0;
+  private toggled = 0;
+  /** When set, the next key press is captured for rebinding instead of played. */
+  captureNext: ((code: string) => void) | null = null;
   private readonly keys = new Set<string>();
   private readonly nav: NavAction[] = [];
   private pausePressed = false;
@@ -121,6 +149,13 @@ export class InputManager {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.repeat) return;
+    if (this.captureNext) {
+      e.preventDefault();
+      const fn = this.captureNext;
+      this.captureNext = null;
+      fn(e.code);
+      return;
+    }
     this.keys.add(e.code);
     this.lastSource = 'keyboard';
     const nav = NAV_KEYS[e.code];
@@ -147,6 +182,7 @@ export class InputManager {
 
   setGameplayActive(active: boolean): void {
     this.gameplayActive = active;
+    this.toggled = 0;
     this.touch.setVisible(active && this.lastSource === 'touch');
     if (!active && document.pointerLockElement) document.exitPointerLock();
     if (!active) this.mouseActive = false;
@@ -210,6 +246,7 @@ export class InputManager {
     if (this.held('roll')) buttons |= Btn.Roll;
     if (this.held('boost')) buttons |= Btn.Boost;
     if (this.held('brake')) buttons |= Btn.Brake;
+    if (this.held('flare')) buttons |= Btn.Flare;
 
     // Mouse: the jet chases a virtual cursor inside the flight envelope.
     if (this.mouseActive && x === 0 && y === 0) {
@@ -234,6 +271,7 @@ export class InputManager {
       if (bp(GP.B) || bp(GP.LB)) buttons |= Btn.Roll;
       if (bv(GP.RT) > 0.35) buttons |= Btn.Boost;
       if (bv(GP.LT) > 0.35) buttons |= Btn.Brake;
+      if (bp(GP.Y)) buttons |= Btn.Flare;
     }
 
     // Touch
@@ -243,6 +281,16 @@ export class InputManager {
       y += t.y;
       buttons |= t.buttons;
     }
+
+    // Hold-vs-toggle (K7): rising edges flip a latched state.
+    const toggleMask =
+      (this.settings.lockToggle ? Btn.Lock : 0) | (this.settings.boostToggle ? Btn.Boost : 0);
+    if (toggleMask) {
+      const rising = buttons & ~this.rawPrev & toggleMask;
+      this.toggled ^= rising;
+      this.rawPrev = buttons;
+      buttons = (buttons & ~toggleMask) | (this.toggled & toggleMask);
+    } else this.rawPrev = buttons;
 
     if (this.settings.invertY) y = -y;
     if (this.settings.autoFire || (t.active && this.touch.autoFire)) buttons |= Btn.Fire;

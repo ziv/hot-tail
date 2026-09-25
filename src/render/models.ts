@@ -42,7 +42,7 @@ const _m = new Matrix4();
 const _q = new Quaternion();
 const _c = new Color();
 
-class Builder {
+export class Builder {
   private parts: BufferGeometry[] = [];
 
   add(geo: BufferGeometry, color: ColorRepresentation, xf: Xf = {}): this {
@@ -117,7 +117,7 @@ function flipWinding(g: BufferGeometry): BufferGeometry {
 }
 
 /** Flat planform (x, z) extruded to a thin slab lying in the XZ plane. */
-function plate(points: [number, number][], thickness = 0.3): BufferGeometry {
+export function plate(points: [number, number][], thickness = 0.3): BufferGeometry {
   const shape = new Shape(points.map(([x, z]) => new Vector2(x, z)));
   const g = new ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
   g.translate(0, 0, -thickness / 2);
@@ -127,7 +127,7 @@ function plate(points: [number, number][], thickness = 0.3): BufferGeometry {
 }
 
 /** Flat profile (z, y) extruded thin along X — for fins and tails. */
-function fin(points: [number, number][], thickness = 0.25): BufferGeometry {
+export function fin(points: [number, number][], thickness = 0.25): BufferGeometry {
   const shape = new Shape(points.map(([z, y]) => new Vector2(z, y)));
   const g = new ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
   g.translate(0, 0, -thickness / 2);
@@ -135,12 +135,12 @@ function fin(points: [number, number][], thickness = 0.25): BufferGeometry {
   return g;
 }
 
-const cyl = (rt: number, rb: number, h: number, seg = 8) => {
+export const cyl = (rt: number, rb: number, h: number, seg = 8) => {
   const g = new CylinderGeometry(rt, rb, h, seg);
   g.rotateX(Math.PI / 2); // axis along Z; top (rt) at +Z
   return g;
 };
-const cone = (r: number, h: number, seg = 8) => {
+export const cone = (r: number, h: number, seg = 8) => {
   const g = new ConeGeometry(r, h, seg);
   g.rotateX(-Math.PI / 2); // tip toward -Z
   return g;
@@ -557,17 +557,3 @@ export function bossCore(): ModelGeo {
   const glow = new Builder().add(new IcosahedronGeometry(8, 1), '#ff3355', {});
   return { body: b.build(), glow: glow.build(), radius: 16 };
 }
-
-export const MODEL_FACTORIES: Record<string, () => ModelGeo> = {
-  player: playerJet,
-  fighter,
-  chaser,
-  drone,
-  ace,
-  missile: () => missile(false),
-  emissile: () => missile(true),
-  fortress: fortressHull,
-  bossTurret,
-  bossEngine,
-  bossCore,
-};

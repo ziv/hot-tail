@@ -143,6 +143,13 @@ export class Fx {
   /** Continuous per-frame emitters: trails, afterburner, damage smoke. */
   frame(sim: Sim, alpha: number, dt: number, playerPos: Vector3): void {
     const n = Math.min(3, Math.max(1, Math.round(dt * 90)));
+    // Flares: blinding magnesium sparks with a smoke tail.
+    for (const f of sim.flares.items) {
+      if (!f.alive) continue;
+      _v.lerpVectors(f.prev, f.pos, alpha);
+      this.puff(this.fx, _v.x, _v.y, _v.z, 0, 0, 0, 0.12, 14, 4, C.flash, C.fire0, 1, 0);
+      this.puff(this.smoke, _v.x, _v.y, _v.z, 0, 4, 0, 1.4, 3, 12, C.lightSmoke0, C.lightSmoke1, 0.4);
+    }
     for (const m of sim.missiles.items) {
       if (!m.alive) continue;
       _v.lerpVectors(m.prev, m.pos, alpha);

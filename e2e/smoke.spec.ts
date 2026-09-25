@@ -40,17 +40,28 @@ test('boots and plays 10 seconds without errors', async ({ page }) => {
   expect(consoleErrors).toEqual([]);
 });
 
-test('title screen menu is navigable by keyboard', async ({ page }) => {
+test('title → jet select → flight via keyboard; leaderboard and settings open', async ({ page }) => {
   await page.goto('/?quality=low');
   await page.waitForFunction(() => window.__hotTail?.state === 'title', null, { timeout: 30_000 });
-  await expect(page.getByRole('button', { name: 'START' })).toBeVisible();
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('button', { name: 'ARCADE' })).toBeVisible();
+  for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter'); // HOW TO PLAY
   await expect(page.getByText('Keyboard + mouse')).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.keyboard.press('ArrowUp');
-  await page.keyboard.press('ArrowUp');
-  await page.keyboard.press('Enter'); // START
+  await page.keyboard.press('ArrowUp'); // LEADERBOARD
+  await page.keyboard.press('Enter');
+  await expect(page.getByText(/LOCAL SCORES|ONLINE|OFFLINE/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown'); // SETTINGS
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'ACCESSIBILITY' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowUp'); // ARCADE
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('SELECT YOUR JET', { exact: false })).toBeVisible();
+  await page.keyboard.press('ArrowRight'); // change jet
+  await expect(page.getByText('DART', { exact: false })).toBeVisible();
+  await page.keyboard.press('Enter'); // TAKE OFF
   await page.waitForFunction(() => window.__hotTail?.state === 'playing');
 });

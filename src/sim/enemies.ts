@@ -26,15 +26,19 @@ export function expandWave(sim: Sim, ev: WaveEvent): { delay: number; spec: Spaw
   const n = ev.count ?? 1;
   const formation: Formation = ev.formation ?? (n > 1 ? 'line' : 'single');
   const behaviourDefault = def.behaviour;
-  const from: From = ev.from ?? (behaviourDefault === 'pursuit' ? 'behind' : 'front');
-  const behaviour = ev.behaviour ?? (from === 'left' || from === 'right' ? 'strafe' : behaviourDefault);
+  let from: From = ev.from ?? (behaviourDefault === 'pursuit' ? 'behind' : 'front');
+  // Seeded per-run mirroring (F17) flips the whole wave left/right.
+  if (sim.mirror) from = from === 'left' ? 'right' : from === 'right' ? 'left' : from;
+  const surface = def.layer === 'surface';
+  const behaviour =
+    ev.behaviour ?? (!surface && (from === 'left' || from === 'right') ? 'strafe' : behaviourDefault);
   const spacing = ev.spacing ?? 60;
-  const params = ev.params ?? {};
+  const params = { ...def.params, ...ev.params };
 
-  let bx = ev.x ?? rng.range(-70, 70);
+  let bx = ev.x !== undefined ? (sim.mirror ? -ev.x : ev.x) : rng.range(-70, 70);
   let by = ev.y ?? rng.range(-25, 25);
-  let bz = FRONT_Z;
-  switch (from) {
+  let bz = surface ? (params.z ?? FRONT_Z) : FRONT_Z;
+  switch (surface ? 'front' : from) {
     case 'behind':
       bz = BEHIND_Z;
       break;
@@ -112,8 +116,15 @@ export function expandWave(sim: Sim, ev: WaveEvent): { delay: number; spec: Spaw
 
 export function spawnEnemy(sim: Sim, spec: SpawnSpec): Entity {
   const def = enemyDef(spec.enemy);
-  const e = sim.spawn('enemy', def.model, spec.behaviour === 'spline' ? 'player' : 'air');
-  e.pos.set(spec.x, spec.y, spec.z);
+  const surface = def.layer === 'surface';
+  const e = sim.spawn(
+    'enemy',
+    def.model,
+    surface ? 'ground' : spec.behaviour === 'spline' ? 'player' : 'air',
+  );
+  e.layer = surface ? 'surface' : 'air';
+  // Surface targets sit on the ground/sea: world altitude `height`, in frame coords.
+  e.pos.set(spec.x, surface ? -sim.railNow.y + (def.height ?? 3) : spec.y, spec.z);
   e.prev.copy(e.pos);
   e.hp = e.maxHp = def.hp;
   e.radius = def.radius;
@@ -163,6 +174,10 @@ export function spawnEnemy(sim: Sim, spec: SpawnSpec): Entity {
     case 'spline':
       e.vel.set(0, 0, 0);
       break;
+    case 'ground':
+      // World-space velocity: dir 1 travels with the player (-z), -1 toward it.
+      e.vel.set(spec.params.vx ?? 0, 0, -(spec.params.dir ?? 1) * sp);
+      break;
     default:
       e.vel.set(0, 0, sp);
   }
@@ -199,6 +214,8 @@ export function updateEnemies(sim: Sim, dt: number): void {
           break;
         case 'spline':
           spline(e, s, dt);
+          break;
+        case 'ground':
           break;
       }
     }
@@ -332,7 +349,7 @@ function evade(sim: Sim, e: Entity, s: EnemyState, dt: number): void {
     e.vel.z = moveToward(e.vel.z, clamp((s.jinkTarget.z - e.pos.z) * 1.8, -420, 420), a);
     // Break away hard when the player lines up a shot or a lock.
     s.evadeCooldown -= dt;
-    if (s.evadeCooldown <= 0) {
+    if ((pr.dodge ?? 1) > 0 && s.evadeCooldown <= 0) {
       _to.subVectors(e.pos, pp).normalize();
       const aimed = _to.dot(sim.player.aim) > 0.99;
       if (aimed || e.locks > 0) {
@@ -374,6 +391,7 @@ function setPhase(s: EnemyState, phase: number): void {
 function canFire(sim: Sim, e: Entity, s: EnemyState): boolean {
   if (s.leaving || sim.player.dead || sim.state !== 'playing') return false;
   const z = e.pos.z;
+  if (e.layer === 'surface') return z < -300 && z > -2300;
   switch (s.spec.behaviour) {
     case 'pursuit':
       return s.phase === 1;
@@ -392,7 +410,8 @@ function updateGuns(sim: Sim, e: Entity, s: EnemyState, dt: number): void {
   for (let i = 0; i < fire.length; i++) {
     const spec = fire[i];
     const g = s.guns[i];
-    g.timer -= dt * tuning.enemy.fireRateScale;
+    if (!g) continue;
+    g.timer -= dt * tuning.enemy.fireRateScale * sim.fireRateScale;
     if (g.timer <= 0) {
       g.timer += spec.interval * sim.rng.range(0.85, 1.15);
       if (spec.chance === undefined || sim.rng.chance(spec.chance)) {
@@ -415,11 +434,11 @@ function updateGuns(sim: Sim, e: Entity, s: EnemyState, dt: number): void {
 /** Fires one trigger of a pattern from `from` at the player (E3). */
 export function fireAt(sim: Sim, from: Vector3, spec: FireSpec): void {
   const pe = sim.player.e;
-  const speed = (spec.speed ?? 700) * tuning.enemy.bulletSpeedScale;
+  const speed = (spec.speed ?? 700) * tuning.enemy.bulletSpeedScale * sim.diff.bulletSpeed;
   _dir.subVectors(pe.pos, from);
   const dist = _dir.length();
   if (dist < 140) return; // point-blank shots are unfair and unreadable
-  if (spec.pattern === 'leading') {
+  if (spec.pattern === 'leading' || spec.pattern === 'flak') {
     const t = dist / speed;
     _dir.x += pe.vel.x * t;
     _dir.y += pe.vel.y * t;
@@ -454,6 +473,12 @@ export function fireAt(sim: Sim, from: Vector3, spec: FireSpec): void {
     }
     case 'homing':
       spawnEnemyMissile(sim, from, _dir);
+      break;
+    case 'flak':
+      // Scattered heavy rounds around the predicted position.
+      _dir.x += sim.rng.range(-0.035, 0.035);
+      _dir.y += sim.rng.range(-0.035, 0.035);
+      spawnEnemyBullet(sim, from, _dir.normalize(), speed).radius = 6;
       break;
     default:
       spawnEnemyBullet(sim, from, _dir, speed);
@@ -493,6 +518,12 @@ export function spawnEnemyMissile(sim: Sim, from: Vector3, dir: Vector3): Entity
 
 /** Faces the entity along its world-space velocity and banks into turns. */
 function orient(sim: Sim, e: Entity, s: EnemyState, dt: number, snap: boolean): void {
+  if (e.motion === 'ground') {
+    if (e.vel.lengthSq() > 1) _face.copy(e.vel);
+    else _face.set(0, 0, 1);
+    lookQuaternion(_face, 0, e.rot);
+    return;
+  }
   _face.copy(e.vel);
   _face.z -= e.motion === 'player' ? sim.speed : sim.cruiseSpeed;
   _acc.subVectors(e.vel, s.lastVel).divideScalar(Math.max(dt, 1e-3));
@@ -524,5 +555,5 @@ function catmull(points: number[][], u: number, out: Vector3): Vector3 {
 
 /** Makes every live enemy break off and leave (stage overtime). */
 export function dismissEnemies(sim: Sim): void {
-  for (const e of sim.enemies.items) if (e.alive) e.enemy!.leaving = true;
+  for (const e of sim.enemies.items) if (e.alive && e.layer === 'air') e.enemy!.leaving = true;
 }

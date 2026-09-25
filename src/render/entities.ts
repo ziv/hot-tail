@@ -16,7 +16,8 @@ import {
 } from 'three';
 import type { Sim } from '@/sim/sim';
 import type { Entity } from '@/sim/types';
-import { MODEL_FACTORIES, enemyBullet, playerBullet, type ModelGeo } from './models';
+import { enemyBullet, playerBullet, type ModelGeo } from './models';
+import { CAPACITY, MODEL_FACTORIES, MODEL_SCALE } from './registry';
 
 /**
  * Instanced rendering (B8): one InstancedMesh (plus an optional unlit "glow"
@@ -66,29 +67,6 @@ class InstancedModel {
     this.count = 0;
   }
 }
-
-/** Render-only scale so small silhouettes stay readable at arcade speed. */
-const MODEL_SCALE: Record<string, number> = {
-  fighter: 1.7,
-  chaser: 1.6,
-  drone: 1.8,
-  ace: 1.7,
-  missile: 1.3,
-  emissile: 1.6,
-};
-
-const CAPACITY: Record<string, number> = {
-  fighter: 48,
-  chaser: 24,
-  drone: 96,
-  ace: 8,
-  missile: 64,
-  emissile: 48,
-  fortress: 1,
-  bossTurret: 8,
-  bossEngine: 4,
-  bossCore: 2,
-};
 
 export class EntityRenderer {
   readonly group = new Group();
@@ -224,21 +202,23 @@ const flameFragment = /* glsl */ `
   }
 `;
 
+/** Nozzle positions per player jet model (for the afterburner flames). */
+const NOZZLES: Record<string, { x: number[]; y: number; z: number; r: number }> = {
+  player: { x: [-0.85, 0.85], y: -0.05, z: 5.95, r: 0.75 },
+  playerDart: { x: [0], y: 0, z: 6.05, r: 0.85 },
+  playerManta: { x: [-1.3, 1.3], y: 0, z: 6.45, r: 0.9 },
+};
+
 /** The player's jet: a regular mesh group with afterburner flames. */
 export class PlayerView {
   readonly group = new Group();
-  private readonly flames: Mesh[] = [];
+  private readonly model = new Group();
+  private flames: Mesh[] = [];
   private readonly flameMat: ShaderMaterial;
-  private readonly body: Mesh;
+  private readonly glowMat = new MeshBasicMaterial({ vertexColors: true, color: new Color(2.4, 2.4, 2.4) });
+  private modelKey = '';
 
-  constructor(bodyMat: MeshStandardMaterial) {
-    const geo = MODEL_FACTORIES.player();
-    this.body = new Mesh(geo.body, bodyMat);
-    this.group.add(this.body);
-    if (geo.glow)
-      this.group.add(
-        new Mesh(geo.glow, new MeshBasicMaterial({ vertexColors: true, color: new Color(2.4, 2.4, 2.4) })),
-      );
+  constructor(private readonly bodyMat: MeshStandardMaterial) {
     this.flameMat = new ShaderMaterial({
       uniforms: { uPower: { value: 0 }, uTime: { value: 0 } },
       vertexShader: flameVertex,
@@ -247,20 +227,36 @@ export class PlayerView {
       depthWrite: false,
       blending: AdditiveBlending,
     });
-    const flameGeo = new ConeGeometry(0.75, 1, 10, 1, true);
+    this.group.add(this.model);
+    this.setModel('player');
+  }
+
+  setModel(key: string): void {
+    if (key === this.modelKey) return;
+    this.modelKey = key;
+    for (const c of [...this.model.children]) {
+      this.model.remove(c);
+      if (c instanceof Mesh && c.material !== this.flameMat) c.geometry.dispose();
+    }
+    const geo = MODEL_FACTORIES[key]();
+    this.model.add(new Mesh(geo.body, this.bodyMat));
+    if (geo.glow) this.model.add(new Mesh(geo.glow, this.glowMat));
+    const n = NOZZLES[key] ?? NOZZLES.player;
+    const flameGeo = new ConeGeometry(n.r, 1, 10, 1, true);
     flameGeo.translate(0, 0.5, 0);
     flameGeo.rotateX(Math.PI / 2); // base at the nozzle, tip toward +Z (behind the jet)
-    for (const x of [-0.85, 0.85]) {
+    this.flames = n.x.map((x) => {
       const f = new Mesh(flameGeo, this.flameMat);
-      f.position.set(x, -0.05, 5.95);
+      f.position.set(x, n.y, n.z);
       f.frustumCulled = false;
-      this.flames.push(f);
-      this.group.add(f);
-    }
+      this.model.add(f);
+      return f;
+    });
   }
 
   update(sim: Sim, alpha: number, time: number): void {
     const p = sim.player;
+    this.setModel(p.e.model);
     interpolate(p.e, alpha, this.group.position, this.group.quaternion);
     const blink = p.invuln > 0 && Math.floor(time * 14) % 2 === 0;
     this.group.visible = !p.dead && !blink;
