@@ -20,6 +20,8 @@ export default defineConfig({
     sourcemap: true,
     chunkSizeWarningLimit: 900,
     rollupOptions: {
+      // Game + landing page (R4).
+      input: { main: 'index.html', about: 'about.html' },
       output: {
         manualChunks(id: string) {
           if (id.includes('node_modules/three')) return 'three';

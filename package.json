@@ -1,7 +1,7 @@
 {
-  "name": "afterburner",
+  "name": "hot-tail",
   "private": true,
-  "version": "0.4.1",
+  "version": "1.0.0",
   "description": "Hot Tail \u2014 arcade-speed jet combat shooter for the web",
   "type": "module",
   "packageManager": "pnpm@10.14.0",
@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/compress.mjs",
+    "build": "tsc --noEmit && node scripts/licenses.mjs > /dev/null && vite build && node scripts/compress.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

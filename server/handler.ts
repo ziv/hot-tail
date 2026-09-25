@@ -1,3 +1,4 @@
+import type { OpsStore } from './ops';
 import {
   aroundMe,
   LB_MODES,
@@ -18,9 +19,12 @@ import {
  *   POST /api/scores                 submit a score (validated, rate limited)
  *   GET  /api/scores?mode&period     top 50 (best per player)
  *   GET  /api/scores/around?mode&period&playerId
+ *   POST /api/scores/delete          erase a player's scores (privacy request)
  *   POST /api/events                 anonymous aggregate gameplay stats
  *   GET  /api/cron/validate          daily sweep of unvalidated runs (Bearer CRON_SECRET)
- *   GET  /api/health
+ *   POST /api/errors                 client error reports, deduplicated (J7)
+ *   GET  /api/status                 public aggregate health/usage summary (R3)
+ *   GET  /api/health[?deep=1]
  */
 export interface EventSink {
   record(day: string, type: string, stage: number, value: number): Promise<void>;
@@ -35,9 +39,19 @@ export interface Deps {
   /** Re-simulates a run replay (J4); omitted → scores stay 'pending' for the cron. */
   validate?: RunValidator;
   cronSecret?: string;
+  /** Error reports + status summary (J7/R3); omitted → those routes answer 404. */
+  ops?: OpsStore;
 }
 
-const EVENT_TYPES = new Set(['stage_start', 'stage_clear', 'death', 'game_over', 'session_length']);
+// load_ms uses `stage` as a 250 ms histogram bucket so the status page can report p50/p95.
+const EVENT_TYPES = new Set([
+  'stage_start',
+  'stage_clear',
+  'death',
+  'game_over',
+  'session_length',
+  'load_ms',
+]);
 
 export async function handleRequest(req: Request, deps: Deps): Promise<Response> {
   const url = new URL(req.url);
@@ -47,7 +61,47 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } });
 
   try {
-    if (url.pathname === '/api/health') return json(200, { ok: true });
+    if (url.pathname === '/api/health') {
+      // ?deep=1 also touches the database (used by the uptime workflow, which
+      // incidentally keeps a free Supabase project from pausing).
+      if (url.searchParams.has('deep')) {
+        try {
+          await deps.store.top('arcade', 0, 1);
+          return json(200, { ok: true, db: true });
+        } catch {
+          return json(503, { ok: false, db: false });
+        }
+      }
+      return json(200, { ok: true });
+    }
+
+    if (url.pathname === '/api/status' && req.method === 'GET' && deps.ops) {
+      const summary = await deps.ops.summary(deps.now());
+      return new Response(JSON.stringify(summary), {
+        status: 200,
+        headers: { ...cors, 'content-type': 'application/json', 'cache-control': 'public, max-age=60' },
+      });
+    }
+
+    if (url.pathname === '/api/errors' && req.method === 'POST' && deps.ops) {
+      const body = (await readJson(req, 40_000)) as {
+        errors?: { message?: string; stack?: string; version?: string }[];
+      };
+      const ua = (req.headers.get('user-agent') ?? '').slice(0, 200);
+      let n = 0;
+      for (const e of body.errors?.slice(0, 10) ?? []) {
+        const message = String(e.message ?? '').slice(0, 300);
+        if (!message) continue;
+        const stack = String(e.stack ?? '').slice(0, 2000);
+        const version = String(e.version ?? '').slice(0, 16);
+        await deps.ops.recordError(
+          { fingerprint: await fingerprint(message, stack), version, message, stack, userAgent: ua },
+          deps.now(),
+        );
+        n++;
+      }
+      return json(200, { recorded: n });
+    }
 
     if (url.pathname === '/api/cron/validate') {
       if (!deps.cronSecret || req.headers.get('authorization') !== `Bearer ${deps.cronSecret}`)
@@ -61,6 +115,13 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       const ipHash = await hashIp(clientIp(req), deps.salt);
       const res = await submitScore(deps.store, body, ipHash, deps.now(), deps.validate);
       return json(res.status, res.body);
+    }
+
+    if (url.pathname === '/api/scores/delete' && req.method === 'POST') {
+      const body = (await readJson(req, 2_000)) as { playerId?: string };
+      const playerId = String(body.playerId ?? '');
+      if (!/^[0-9a-f]{24}$/.test(playerId)) return json(400, { error: 'bad playerId' });
+      return json(200, { deleted: await deps.store.deletePlayer(playerId) });
     }
 
     if (url.pathname.startsWith('/api/scores') && req.method === 'GET') {
@@ -118,6 +179,14 @@ async function readJson(req: Request, maxBytes: number): Promise<unknown> {
   } catch {
     throw new HttpError(400, 'invalid json');
   }
+}
+
+/** Groups identical errors: message with numbers masked + the first stack frame (without line/col). */
+async function fingerprint(message: string, stack: string): Promise<string> {
+  const frame = stack.split('\n').find((l) => l.includes('at ') || l.includes('@')) ?? '';
+  const key = `${message.replace(/\d+/g, '#')}|${frame.replace(/:\d+:\d+/g, '').trim()}`;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+  return Array.from(new Uint8Array(digest).slice(0, 10), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** Client IP from the platform's proxy headers (Vercel sets x-real-ip / x-forwarded-for). */

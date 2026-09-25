@@ -44,7 +44,7 @@ Weekly boards reset Monday 00:00 UTC. Raw IPs are never stored (salted SHA-256 o
 
 3. Deploy. The game on that domain automatically uses `/api` (the build sets `VITE_API_BASE` to same-origin); the daily cron is registered from the build output.
 
-To host the game elsewhere and point it at this API, build with `VITE_API_BASE=https://<your-app>.vercel.app` and set `ALLOWED_ORIGIN` on Vercel to the game's origin.
+To host the game elsewhere and point it at this API, build with `VITE_API_BASE=https://hot-tail.vercel.app` and set `ALLOWED_ORIGIN` on Vercel to the game's origin.
 
 ## Free-tier notes
 

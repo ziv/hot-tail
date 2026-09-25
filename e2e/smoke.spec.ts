@@ -1,18 +1,5 @@
 import { expect, test } from '@playwright/test';
-
-interface HotTailHook {
-  state: string;
-  simTime: number;
-  score: number;
-  errors: string[];
-  app: { fps: number };
-}
-
-declare global {
-  interface Window {
-    __hotTail?: HotTailHook;
-  }
-}
+import './hook';
 
 /**
  * A5 smoke test: boot, play ~10 s of stage 1 with the scripted autopilot and

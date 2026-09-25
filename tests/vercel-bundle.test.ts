@@ -6,6 +6,7 @@ import { Sim } from '@/sim/sim';
 import { STAGES } from '@/sim/stages';
 import { botInput } from '@/sim/bot';
 import { encodeRun, quantizeInput, RunRecorder } from '@/sim/replay';
+import { SECURITY_HEADERS } from '../scripts/security-headers.mjs';
 
 /**
  * End-to-end check of the deployable Vercel function (.vercel/output, built by
@@ -20,6 +21,20 @@ function listen(server: Server): Promise<number> {
 }
 
 describe.skipIf(!existsSync(BUNDLE))('Vercel function bundle', () => {
+  it('routes every response through the security headers and ships the cron', () => {
+    const config = JSON.parse(readFileSync('.vercel/output/config.json', 'utf8')) as {
+      routes: { src?: string; headers?: Record<string, string> }[];
+      crons: { path: string }[];
+    };
+    const all = config.routes.find((r) => r.src === '/(.*)');
+    expect(all?.headers).toEqual(SECURITY_HEADERS);
+    expect(config.crons.map((c) => c.path)).toEqual(['/api/cron/validate']);
+    expect(existsSync('.vercel/output/static/robots.txt')).toBe(true);
+    expect(readFileSync('.vercel/output/static/index.html', 'utf8')).toContain(
+      'https://hot-tail.vercel.app/media/og.jpg',
+    );
+  });
+
   it('serves submit (with replay validation), top and cron against Supabase RPC', async () => {
     const db = new PGlite();
     await db.exec(readFileSync('supabase/migrations/20260925120000_leaderboard.sql', 'utf8'));

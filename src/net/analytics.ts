@@ -5,7 +5,7 @@
  */
 const API = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '');
 
-export type StatType = 'stage_start' | 'stage_clear' | 'death' | 'game_over' | 'session_length';
+export type StatType = 'stage_start' | 'stage_clear' | 'death' | 'game_over' | 'session_length' | 'load_ms';
 
 export class Analytics {
   enabled = true;

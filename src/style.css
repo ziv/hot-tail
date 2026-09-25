@@ -474,7 +474,7 @@ body {
   #rotate-hint {
     display: block;
     position: fixed;
-    top: calc(8px + var(--safe-t));
+    top: calc(150px + var(--safe-t));
     left: 50%;
     transform: translateX(-50%);
     z-index: 30;

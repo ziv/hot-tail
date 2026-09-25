@@ -222,6 +222,21 @@ describe('Content', () => {
     expect(sim.state).toBe('cleared');
   });
 
+  it('a boss whose weak points die out of order still falls (no stuck phase)', () => {
+    const sim = new Sim(3);
+    sim.cheats.invincible = true;
+    sim.loadStage(STAGES[17]);
+    sim.director!.jumpTo(sim, 30);
+    for (let i = 0; i < 60 * 8; i++) sim.step(EMPTY_INPUT);
+    // Kill the core first, then everything else.
+    const parts = [...sim.bossParts.items].sort((a, b) => b.bossPart!.phase - a.bossPart!.phase);
+    for (const p of parts) sim.kill(p);
+    let defeated = false;
+    sim.events.on('bossDefeated', () => (defeated = true));
+    for (let i = 0; i < 60 * 10 && !defeated; i++) sim.step(EMPTY_INPUT);
+    expect(defeated).toBe(true);
+  });
+
   it('seeded variants and mirroring stay deterministic', () => {
     const run = (seed: number) => {
       const sim = new Sim(seed);

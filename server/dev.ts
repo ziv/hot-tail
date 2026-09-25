@@ -3,6 +3,7 @@ import { MemoryScoreStore } from '../shared/leaderboard';
 import { handleRequest } from './handler';
 import { validateReplay } from './validate-replay';
 import vercelHandler from './vercel';
+import { MemoryOpsStore } from './ops';
 
 /**
  * Local API for `pnpm dev:api` (Vite proxies /api here). Uses Supabase when
@@ -18,6 +19,7 @@ const memory = {
   now: () => Date.now(),
   validate: validateReplay,
   cronSecret: 'dev',
+  ops: new MemoryOpsStore(),
 };
 
 createServer(async (req, res) => {

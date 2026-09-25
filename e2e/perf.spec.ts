@@ -1,4 +1,5 @@
 import { test } from '@playwright/test';
+import './hook';
 
 /**
  * Q4 perf fly-through: runs the autopilot for 20 s and reports p95 frame time.
@@ -7,9 +8,7 @@ import { test } from '@playwright/test';
  */
 test('perf fly-through reports p95 frame time', async ({ page }, info) => {
   await page.goto('/?autotest');
-  await page.waitForFunction(
-    () => (window as unknown as { __hotTail?: { state: string } }).__hotTail?.state === 'playing',
-  );
+  await page.waitForFunction(() => window.__hotTail?.state === 'playing');
   const frames = await page.evaluate(
     () =>
       new Promise<number[]>((resolve) => {

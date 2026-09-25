@@ -507,9 +507,11 @@ export function onBossPartDestroyed(sim: Sim, part: Entity): void {
   const boss = ps.boss;
   const b = boss.boss;
   if (!b || !boss.alive) return;
-  const remaining = b.parts.some((p) => p.alive && p.bossPart!.phase === b.phase);
-  if (remaining) return;
-  b.phase++;
+  const alive = (phase: number) => b.parts.some((p) => p.alive && p.bossPart!.phase === phase);
+  if (alive(b.phase)) return;
+  // Advance past any phase whose weak points are already gone.
+  do b.phase++;
+  while (b.phase <= 3 && !alive(b.phase));
   if (b.phase > 3) {
     b.dying = 3.2;
     for (const p of b.parts) if (p.alive) sim.world.remove(p);

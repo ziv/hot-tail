@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hot Tail — arcade jet combat, free in your browser</title>
+    <meta
+      name="description"
+      content="Hot Tail is a free, ad-free arcade jet combat game that runs in your browser: 18 stages, 5 worlds, 4 giant bosses, lock-on missile volleys and barrel rolls."
+    />
+    <link rel="canonical" href="https://hot-tail.vercel.app/about.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Hot Tail — arcade jet combat" />
+    <meta
+      property="og:description"
+      content="18 stages, 5 worlds, 4 giant bosses. Free in your browser — no ads, no download."
+    />
+    <meta property="og:image" content="https://hot-tail.vercel.app/media/og.jpg" />
+    <meta property="og:url" content="https://hot-tail.vercel.app/about.html" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0a1422" />
+    <link rel="icon" href="./icons/icon-192.png" />
+    <link rel="stylesheet" href="./public-pages.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero-inner">
+        <h1 class="logo"><span class="hot">HOT</span>TAIL</h1>
+        <p class="tag">Arcade jet combat · free in your browser · no ads</p>
+        <p class="cta">
+          <a class="btn primary" href="./">PLAY NOW</a>
+          <a class="btn" href="#trailer">WATCH TRAILER</a>
+        </p>
+      </div>
+    </header>
+
+    <main>
+      <section id="trailer" class="band">
+        <video controls preload="none" poster="./media/trailer-poster.jpg" playsinline>
+          <source src="./media/trailer.mp4" type="video/mp4" />
+        </video>
+      </section>
+
+      <section class="band features">
+        <div>
+          <h3>18 stages, 5 worlds</h3>
+          <p>Open ocean, a desert canyon run, glacier valleys, a neon city at night and the edge of space.</p>
+        </div>
+        <div>
+          <h3>Lock on. Let fly.</h3>
+          <p>
+            Sweep the reticle over up to eight targets and release a missile volley. Guns for air, missiles
+            for everything on the ground.
+          </p>
+        </div>
+        <div>
+          <h3>4 giant bosses</h3>
+          <p>
+            A flying fortress, a carrier group, a cloaking stealth ace and an orbital platform — each with
+            three phases.
+          </p>
+        </div>
+        <div>
+          <h3>Roll, boost, brake</h3>
+          <p>Barrel-roll through missiles, burn past tail-chasers or brake hard to make them overshoot.</p>
+        </div>
+        <div>
+          <h3>Modern or retro</h3>
+          <p>Switch between modern 3D and a super-scaler sprite look, rendered from the same game.</p>
+        </div>
+        <div>
+          <h3>Fair leaderboards</h3>
+          <p>Every submitted run is replayed on the server before it counts — no fake scores.</p>
+        </div>
+      </section>
+
+      <section class="band">
+        <h2>Screenshots</h2>
+        <div class="gallery">
+          <img loading="lazy" src="./media/shots/ocean.jpg" alt="Dogfight over the open sea" />
+          <img loading="lazy" src="./media/shots/desert.jpg" alt="Low run through the desert canyon" />
+          <img loading="lazy" src="./media/shots/mountains.jpg" alt="Glacier pass between snowy peaks" />
+          <img loading="lazy" src="./media/shots/city.jpg" alt="Lock-on volley over the night city" />
+          <img
+            loading="lazy"
+            src="./media/shots/stratosphere.jpg"
+            alt="Above the clouds at the edge of space"
+          />
+          <img
+            loading="lazy"
+            src="./media/shots/boss-fortress.jpg"
+            alt="The Leviathan flying fortress at dusk"
+          />
+          <img loading="lazy" src="./media/shots/boss-halo.jpg" alt="The Halo orbital platform" />
+          <img loading="lazy" src="./media/shots/retro.jpg" alt="Retro sprite-scaling mode" />
+        </div>
+      </section>
+
+      <section class="band two">
+        <div>
+          <h2>Controls</h2>
+          <table>
+            <tr>
+              <td>Steer</td>
+              <td>WASD / arrows · mouse · left stick · touch stick</td>
+            </tr>
+            <tr>
+              <td>Guns</td>
+              <td>Space / J · left mouse · A · AUTO on touch</td>
+            </tr>
+            <tr>
+              <td>Lock &amp; missiles</td>
+              <td>Hold K / right mouse / X, release to fire</td>
+            </tr>
+            <tr>
+              <td>Barrel roll</td>
+              <td>L · double-tap a direction · B</td>
+            </tr>
+            <tr>
+              <td>Boost / brake</td>
+              <td>Shift / Q · RT / LT</td>
+            </tr>
+            <tr>
+              <td>Flares</td>
+              <td>R · Y</td>
+            </tr>
+          </table>
+          <p class="dim">
+            Keyboard, mouse, gamepad and touch. Keys can be rebound; aim assist, toggle controls and
+            colour-blind HUD palettes are in Settings.
+          </p>
+        </div>
+        <div>
+          <h2>Credits</h2>
+          <p>
+            Design &amp; direction: Ziv<br />Programming, procedural art &amp; audio: Ziv &amp; Claude
+            (Anthropic)
+          </p>
+          <p class="dim">
+            Built with Three.js, Vite and TypeScript. Hosted on Vercel with a Supabase database.
+          </p>
+          <p>
+            <a href="./privacy.html">Privacy</a> · <a href="./licenses.txt">Open-source licences</a> ·
+            <a href="./status.html">Status</a>
+          </p>
+        </div>
+      </section>
+    </main>
+    <footer class="dim">Hot Tail is an original game. Free to play, no ads.</footer>
+  </body>
+</html>

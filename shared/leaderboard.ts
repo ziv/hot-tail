@@ -58,6 +58,8 @@ export interface ScoreStore {
   /** Oldest rows awaiting replay validation. */
   pending(limit: number): Promise<(ScoreRow & { id: number })[]>;
   setStatus(id: number, status: ScoreStatus): Promise<void>;
+  /** Erases every score of a player (privacy request); returns rows removed. */
+  deletePlayer(playerId: string): Promise<number>;
 }
 
 const BLOCKED = [
@@ -179,6 +181,12 @@ export class MemoryScoreStore implements ScoreStore {
   async setStatus(id: number, status: ScoreStatus): Promise<void> {
     const row = this.rows.find((r) => r.id === id);
     if (row) row.status = status;
+  }
+
+  async deletePlayer(playerId: string): Promise<number> {
+    const before = this.rows.length;
+    this.rows = this.rows.filter((r) => r.playerId !== playerId);
+    return before - this.rows.length;
   }
 
   private bests(mode: LbMode, since: number): ScoreRow[] {

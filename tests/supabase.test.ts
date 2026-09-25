@@ -4,6 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { SupabaseEventSink, SupabaseScoreStore, type RpcClient } from '../server/supabase';
 import { handleRequest, type Deps } from '../server/handler';
 import { validateReplay } from '../server/validate-replay';
+import { SupabaseOpsStore } from '../server/ops';
 import { Sim } from '@/sim/sim';
 import { STAGES } from '@/sim/stages';
 import { botInput } from '@/sim/bot';
@@ -14,7 +15,10 @@ import type { InputFrame } from '@/sim/types';
  * Runs the real Supabase migration in PGlite (Postgres compiled to WASM) and
  * drives it through the same RPC calls supabase-js makes, so the SQL is tested.
  */
-const MIGRATION = readFileSync('supabase/migrations/20260925120000_leaderboard.sql', 'utf8');
+const MIGRATION =
+  readFileSync('supabase/migrations/20260925120000_leaderboard.sql', 'utf8') +
+  readFileSync('supabase/migrations/20260926090000_ops.sql', 'utf8') +
+  readFileSync('supabase/migrations/20260926100000_privacy.sql', 'utf8');
 
 /** Mimics supabase-js rpc(): named args; scalar functions return the bare value. */
 function pgliteRpc(db: PGlite): RpcClient {
@@ -54,6 +58,7 @@ beforeEach(async () => {
     now: () => NOW,
     validate: validateReplay,
     cronSecret: 'secret',
+    ops: new SupabaseOpsStore(rpc),
   };
 });
 
@@ -156,5 +161,37 @@ describe('Supabase store (PGlite)', () => {
     });
     const r = await db.query<{ count: number; total: number }>('select count, total from events');
     expect(r.rows).toEqual([{ count: 2, total: 2 }]);
+  });
+
+  it('dedupes client errors and serves an aggregate status summary', async () => {
+    const err = {
+      message: 'TypeError: x is undefined at 12',
+      stack: 'at render (view.ts:10:5)',
+      version: '1.0.0',
+    };
+    await post('/api/errors', { errors: [err, { ...err, message: 'TypeError: x is undefined at 99' }] });
+    await post('/api/errors', { errors: [{ ...err, message: 'Other failure' }] });
+    // Load-time histogram: 250 ms buckets 3,3,4,20 → p50 ≈ 1 s, p95 ≈ 5.25 s.
+    await post('/api/events', {
+      events: [3, 3, 4, 20].map((b) => ({ type: 'load_ms', stage: b })),
+    });
+    await post('/api/scores', { ...base, playerId: pid('a'), name: 'x', score: 10 });
+    const s = (await (await get('/api/status')).json()) as Record<string, unknown>;
+    expect(s.errors24h).toBe(3);
+    expect((s.topErrors as unknown[]).length).toBe(2); // numbers masked → same fingerprint
+    expect(s.scores24h).toBe(1);
+    expect(s.loadP50Ms).toBe(1000);
+    expect(s.loadP95Ms).toBe(5250);
+    const health = await get('/api/health?deep=1');
+    expect(await health.json()).toEqual({ ok: true, db: true });
+  });
+
+  it('lets a player erase their own scores', async () => {
+    await post('/api/scores', { ...base, playerId: pid('a'), name: 'me', score: 10 });
+    await post('/api/scores', { ...base, playerId: pid('a'), name: 'me', score: 20 }, '1.1.1.9');
+    await post('/api/scores', { ...base, playerId: pid('b'), name: 'other', score: 30 }, '2.2.2.2');
+    const res = await post('/api/scores/delete', { playerId: pid('a') });
+    expect(await res.json()).toEqual({ deleted: 2 });
+    expect((await deps.store.top('arcade', 0, 10)).map((e) => e.name)).toEqual(['OTHER']);
   });
 });

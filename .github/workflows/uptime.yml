@@ -1,0 +1,25 @@
+# R3 uptime alerting on the free tier: GitHub emails the repo owner when a run fails.
+# Checks https://hot-tail.vercel.app; set the repository variable SITE_URL to override.
+# The deep health check also keeps a free Supabase project from pausing.
+name: Uptime
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      SITE_URL: ${{ vars.SITE_URL || 'https://hot-tail.vercel.app' }}
+    steps:
+      - name: Game loads
+        run: curl --fail --silent --show-error --max-time 20 "$SITE_URL/" -o /dev/null
+      - name: API + database healthy
+        run: curl --fail --silent --show-error --max-time 20 "$SITE_URL/api/health?deep=1"
+      - name: Error spike check
+        run: |
+          errors=$(curl --fail --silent --max-time 20 "$SITE_URL/api/status" | python3 -c 'import json,sys; print(json.load(sys.stdin)["errors24h"])')
+          echo "client errors in the last 24h: $errors"
+          if [ "$errors" -gt 200 ]; then echo "::error::Client error spike ($errors in 24h)"; exit 1; fi

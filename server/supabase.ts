@@ -97,6 +97,10 @@ export class SupabaseScoreStore implements ScoreStore {
   async setStatus(id: number, status: ScoreStatus): Promise<void> {
     await call(this.db, 'lb_set_status', { p_id: id, p_status: status });
   }
+
+  async deletePlayer(playerId: string): Promise<number> {
+    return Number(await call(this.db, 'lb_delete_player', { p_player_id: playerId }));
+  }
 }
 
 export class SupabaseEventSink implements EventSink {

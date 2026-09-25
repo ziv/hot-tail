@@ -21,7 +21,8 @@ export class GameLoop {
   private acc = 0;
   private last = -1;
   private raf = 0;
-  private readonly maxSteps = 5;
+  /** Max ticks per frame before dropping time (anti-spiral); raised in test turbo mode. */
+  maxSteps = 5;
 
   constructor(private readonly hooks: LoopHooks) {}
 

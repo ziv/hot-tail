@@ -6,6 +6,8 @@
 import { execSync } from 'node:child_process';
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
+import { SECURITY_HEADERS } from './security-headers.mjs';
+import { fillContact } from './contact.mjs';
 
 const out = '.vercel/output';
 rmSync(out, { recursive: true, force: true });
@@ -17,6 +19,7 @@ execSync('pnpm build', {
 });
 // Vercel compresses on the fly; skip the .br/.gz copies made for other hosts.
 cpSync('dist', `${out}/static`, { recursive: true, filter: (src) => !/\.(br|gz)$/.test(src) });
+fillContact(`${out}/static/privacy.html`);
 
 // 2. API function: bundle server + simulation (for replay validation) + supabase-js.
 const fn = `${out}/functions/api.func`;
@@ -52,6 +55,7 @@ writeFileSync(
     {
       version: 3,
       routes: [
+        { src: '/(.*)', headers: SECURITY_HEADERS, continue: true },
         {
           src: '/assets/(.*)',
           headers: { 'cache-control': 'public, max-age=31536000, immutable' },

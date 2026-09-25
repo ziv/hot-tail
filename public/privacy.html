@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hot Tail — privacy</title>
+    <link rel="stylesheet" href="./pages.css" />
+  </head>
+  <body>
+    <main class="doc">
+      <p><a href="./">← Back to the game</a></p>
+      <h1>Privacy policy</h1>
+      <p class="dim">Last updated 26 September 2026 · applies to Hot Tail on this website</p>
+      <p>
+        Hot Tail is a free game with no ads, no accounts, no cookies and no third-party trackers. This page
+        lists everything the game stores or sends, and how to switch it off or delete it.
+      </p>
+
+      <h2>On your device</h2>
+      <p>
+        The game keeps your settings, key bindings, best scores, practice progress and your best stage-1 run
+        (for the title-screen demo) in your browser's local storage. It also creates a
+        <strong>random player ID</strong> (24 hex characters, not linked to you) and the callsign you type.
+        Clearing the site's data in your browser removes all of it. An offline copy of the game is cached by a
+        service worker.
+      </p>
+
+      <h2>When you post a high score</h2>
+      <p>
+        Submitting a score sends: your random player ID, callsign, score, stage reached, mode, jet,
+        difficulty, game version and a recording of your controller inputs for that run (used to verify the
+        score by replaying it). Scores and callsigns appear publicly on the leaderboard. To limit abuse, the
+        server stores a salted one-way hash of your IP address with each score; the IP address itself is never
+        stored.
+      </p>
+      <p>
+        <strong>Delete your scores</strong> any time:
+        <em>Settings → Gameplay → Delete my leaderboard scores</em>. This removes every score tied to your
+        player ID, locally and on the server.
+      </p>
+
+      <h2>Anonymous statistics and error reports</h2>
+      <p>
+        Unless you turn it off (<em>Settings → Gameplay → Anonymous stats &amp; error reports</em>), the game
+        sends daily counters such as "stage 4 was cleared" or "a player died on stage 7", how long loading
+        took (rounded to 250 ms), and technical error messages (error text, code location, game version and
+        browser name). These carry no player ID, callsign or IP address, and only aggregates are kept.
+      </p>
+
+      <h2>Who processes the data</h2>
+      <p>
+        The website and API are hosted by <strong>Vercel</strong>, and leaderboard data is stored in a
+        <strong>Supabase</strong> Postgres database. Like any web host, they process standard request logs to
+        deliver the service. Nothing is sold or shared with anyone else.
+      </p>
+
+      <h2>Retention</h2>
+      <p>
+        Leaderboard entries are kept until you delete them or the leaderboard is reset. Aggregate statistics
+        and error reports are kept for up to 12 months.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        The game collects no personal information knowingly from anyone; callsigns are filtered for offensive
+        words.
+      </p>
+
+      <h2>Contact</h2>
+      <p>Questions or requests: <span id="contact">__CONTACT__</span>.</p>
+    </main>
+  </body>
+</html>

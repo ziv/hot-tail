@@ -19,7 +19,7 @@ interface Song {
   arp?: boolean;
 }
 
-const SONGS: Record<string, Song> = {
+export const SONGS: Record<string, Song> = {
   title: {
     bpm: 118,
     roots: [45, 41, 43, 40],
@@ -227,7 +227,7 @@ function parseLead(bars: string[]): [number, number][] {
 
 const freq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 
-class Playback {
+export class Playback {
   readonly gain: GainNode;
   step = 0;
   nextTime: number;

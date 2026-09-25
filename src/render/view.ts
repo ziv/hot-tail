@@ -7,7 +7,7 @@ import {
   SRGBColorSpace,
   Vector3,
   WebGLRenderer,
-  type Texture,
+  type WebGLRenderTarget,
 } from 'three';
 import type { Sim } from '@/sim/sim';
 import type { StageDef } from '@/sim/defs';
@@ -55,7 +55,8 @@ export class GameView {
   private readonly smokeSys: ParticleSystem;
   readonly fx: Fx;
   private readonly pmrem: PMREMGenerator;
-  private envMap: Texture | null = null;
+  /** PMREM render target for reflections; disposed whole on every rebuild (a texture-only dispose leaked). */
+  private envTarget: WebGLRenderTarget | null = null;
   private quality: QualitySettings;
   private time = 0;
   private readonly playerPos = new Vector3();
@@ -208,9 +209,9 @@ export class GameView {
     const skyScene = new Scene();
     const sky = new Mesh(this.env.sky.geometry, this.env.sky.material);
     skyScene.add(sky);
-    this.envMap?.dispose();
-    this.envMap = this.pmrem.fromScene(skyScene, 0, 1, 9000).texture;
-    this.entities.setEnvMap(this.envMap);
+    this.envTarget?.dispose();
+    this.envTarget = this.pmrem.fromScene(skyScene, 0, 1, 9000);
+    this.entities.setEnvMap(this.envTarget.texture);
   }
 
   bind(sim: Sim): void {

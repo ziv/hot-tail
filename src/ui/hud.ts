@@ -173,7 +173,9 @@ export class Hud {
     const c = this.ctx;
     const R = Math.max(38, Math.min(56, Math.min(this.w, this.h) * 0.075));
     const cx = this.w / 2;
-    const cy = this.h - R - Math.max(14, Math.min(this.w, this.h) * 0.025) - (this.touchSafe ? 120 : 0);
+    // Portrait phones: lift the scope above the touch button grid.
+    const lift = this.touchSafe && this.w < 640 ? 240 : 0;
+    const cy = this.h - R - Math.max(14, Math.min(this.w, this.h) * 0.025) - lift;
     const range = 2800;
     c.save();
     c.fillStyle = 'rgba(0, 12, 24, 0.45)';
@@ -482,7 +484,10 @@ export class Hud {
       }
     }
 
-    const bottom = this.h - pad - (this.touchSafe ? 120 : 0);
+    // With touch controls the stick zone is bottom-left (transparent) and the
+    // button grid bottom-right, so the right-hand block moves to the top-right.
+    const bottom = this.h - pad;
+    const rb = this.touchSafe ? safeTop + (small ? 86 : 100) : bottom;
     // Lives + armour (bottom-left)
     c.textAlign = 'left';
     for (let i = 0; i < Math.min(sim.score.lives, 8); i++) {
@@ -513,7 +518,7 @@ export class Hud {
     c.font = `800 11px ${FONT}`;
     c.fillText(
       p.throttle === 'boost'
-        ? 'AFTERBURNER'
+        ? 'BOOST'
         : p.throttle === 'brake'
           ? 'AIR BRAKE'
           : `${Math.round(sim.speed * 3.6)} KM/H`,
@@ -521,17 +526,17 @@ export class Hud {
       bottom + 1,
     );
 
-    // Missiles + lock slots (bottom-right)
+    // Missiles + lock slots (bottom-right; top-right with touch controls)
     c.textAlign = 'right';
     c.fillStyle = p.missiles < 10 ? WARM : WHITE;
     c.font = `italic 800 ${small ? 20 : 26}px ${FONT}`;
-    c.fillText(`${sim.cheats.infiniteMissiles ? '∞' : p.missiles}`, this.w - pad, bottom);
+    c.fillText(`${sim.cheats.infiniteMissiles ? '∞' : p.missiles}`, this.w - pad, rb);
     c.font = `700 11px ${FONT}`;
     c.fillStyle = CYAN;
-    c.fillText('MSL', this.w - pad, bottom - (small ? 22 : 28));
+    c.fillText('MSL', this.w - pad, rb - (small ? 22 : 28));
     for (let i = 0; i < sim.jet.maxLocks; i++) {
       const x = this.w - pad - (small ? 50 : 64) - i * 14;
-      const y = bottom - 8;
+      const y = rb - 8;
       c.save();
       c.translate(x, y);
       c.rotate(Math.PI / 4);
@@ -547,16 +552,16 @@ export class Hud {
     // Flares
     c.font = `700 11px ${FONT}`;
     c.fillStyle = CYAN;
-    c.fillText('FLR', this.w - pad - (small ? 50 : 64) - sim.jet.maxLocks * 14 - 8, bottom - 4);
+    c.fillText('FLR', this.w - pad - (small ? 50 : 64) - sim.jet.maxLocks * 14 - 8, rb - 4);
     for (let i = 0; i < 3; i++) {
       c.fillStyle = i < p.flares ? WHITE : 'rgba(255,255,255,0.15)';
       c.beginPath();
-      c.arc(this.w - pad - 8 - i * 11, bottom - (small ? 38 : 46), 3.5, 0, Math.PI * 2);
+      c.arc(this.w - pad - 8 - i * 11, rb - (small ? 38 : 46), 3.5, 0, Math.PI * 2);
       c.fill();
     }
     if (p.rollCooldown > 0) {
       c.fillStyle = DIM;
-      c.fillRect(this.w - pad - 60, bottom + 6, 60 * (1 - p.rollCooldown / tuning.roll.cooldown), 3);
+      c.fillRect(this.w - pad - 60, rb + 6, 60 * (1 - p.rollCooldown / tuning.roll.cooldown), 3);
     }
 
     // Tanker refuel status

@@ -18,7 +18,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   fire: 'Vulcan',
   lock: 'Lock / missiles',
   roll: 'Barrel roll',
-  boost: 'Afterburner',
+  boost: 'Boost',
   brake: 'Air-brake',
   flare: 'Flares',
   pause: 'Pause',

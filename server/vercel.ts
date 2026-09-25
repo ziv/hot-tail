@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createClient } from '@supabase/supabase-js';
 import { handleRequest, type Deps } from './handler';
 import { SupabaseEventSink, SupabaseScoreStore } from './supabase';
+import { SupabaseOpsStore } from './ops';
 import { validateReplay } from './validate-replay';
 
 /**
@@ -26,6 +27,7 @@ function getDeps(): Deps | null {
     now: () => Date.now(),
     validate: validateReplay,
     cronSecret: process.env.CRON_SECRET,
+    ops: new SupabaseOpsStore(db),
   };
   return deps;
 }

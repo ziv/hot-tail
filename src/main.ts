@@ -1,13 +1,28 @@
 import './style.css';
 import { App } from '@/game/app';
 import type { QualityLevel } from '@/render/quality';
+import { damagePlayer } from '@/sim/player';
+import { Telemetry } from '@/net/telemetry';
 
 /** Boot: feature detection (K1), error capture (J7 stub), then the app. */
 const params = new URLSearchParams(location.search);
 const errors: string[] = [];
 
-window.addEventListener('error', (e) => errors.push(String(e.message)));
-window.addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+const telemetry = new Telemetry();
+window.addEventListener('error', (e) => {
+  errors.push(String(e.message));
+  telemetry.report(
+    String(e.message),
+    e.error instanceof Error ? (e.error.stack ?? '') : `${e.filename}:${e.lineno}`,
+  );
+});
+window.addEventListener('unhandledrejection', (e) => {
+  errors.push(String(e.reason));
+  telemetry.report(
+    `Unhandled rejection: ${String(e.reason)}`,
+    e.reason instanceof Error ? (e.reason.stack ?? '') : '',
+  );
+});
 
 function supportsWebGL2(): boolean {
   try {
@@ -40,6 +55,8 @@ async function main(): Promise<void> {
     },
     { autotest: params.has('autotest'), debug: params.has('debug'), quality },
   );
+  // Error reports follow the same opt-out as anonymous stats.
+  telemetry.enabled = app.save.settings.analytics;
   // Test/automation hook (Playwright smoke + perf fly-through).
   Object.assign(window, {
     __hotTail: {
@@ -58,6 +75,42 @@ async function main(): Promise<void> {
       probe: async () => (await import('@/sim/probe')).determinismProbe(),
     },
   });
+
+  // Test/capture helpers (?debug, or ?hooks without the panel): drive flows without playing them out.
+  if (params.has('debug') || params.has('hooks')) {
+    Object.assign((window as unknown as { __hotTail: object }).__hotTail, {
+      debug: {
+        damagePlayer: (n: number) => {
+          app.sim.player.invuln = 0;
+          damagePlayer(app.sim, n);
+        },
+        startGame: (mode: 'arcade' | 'scoreAttack' | 'practice', stage: number) => app.startGame(mode, stage),
+        /** Headless CI renders at a few fps: let the sim catch up and run fast. */
+        turbo: () => {
+          app.loop.maxSteps = 120;
+          app.loop.timeScale = 4;
+        },
+        clearStage: () => {
+          app.sim.cheats.invincible = true;
+          const d = app.sim.director;
+          if (!d) return;
+          d.jumpTo(
+            app.sim,
+            d.bossStage
+              ? Math.max(0, ...d.stage.events.filter((e) => e.type === 'boss').map((e) => e.t))
+              : d.duration + 0.5,
+          );
+        },
+        destroyBoss: () => {
+          const tick = setInterval(() => {
+            const part = app.sim.bossParts.items.find((p) => p.alive);
+            if (part) app.sim.kill(part);
+            else clearInterval(tick);
+          }, 250);
+        },
+      },
+    });
+  }
 
   let debug: { toggle(): void } | null = null;
   const openDebug = async () => {

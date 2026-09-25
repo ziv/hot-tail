@@ -100,6 +100,10 @@ export class App {
         this.audio.engine.suspend();
       } else this.audio.engine.resume();
     });
+    // Touch/mouse players skip cutscenes with a tap.
+    els.canvas.addEventListener('pointerdown', () => {
+      if (this.state === 'cutscene') this.finishCutscene();
+    });
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyF' && this.state !== 'boot' && !this.input.captureNext && !this.typing)
         toggleFullscreen();
@@ -369,7 +373,7 @@ export class App {
     this.input.setGameplayActive(false);
     this.cutsceneDone = done;
     this.view.playCutscene(id, JETS[this.jet].model, id === 'takeoff' ? 'day' : 'sunset');
-    this.toast('Press Enter / A to skip', 2500);
+    this.toast('Tap, Enter or A to skip', 2500);
   }
 
   private finishCutscene(): void {
@@ -434,7 +438,14 @@ export class App {
     this.audio.engine.setMusicDim(false);
   }
 
+  private loadTracked = false;
+
   showTitle(): void {
+    // Time to first interactive title, as a 250 ms histogram bucket (R3).
+    if (!this.loadTracked) {
+      this.loadTracked = true;
+      this.analytics.track('load_ms', Math.min(99, Math.floor(performance.now() / 250)));
+    }
     this.timers = [];
     this.state = 'title';
     this.loop.paused = false;
@@ -686,7 +697,7 @@ export class App {
       this.toggle('INVERT Y', 'invertY'),
       this.slider('MOUSE SENSITIVITY', 'mouseSensitivity', 0.3, 2.5, 0.1),
       this.toggle('LOCK: TOGGLE MODE', 'lockToggle'),
-      this.toggle('AFTERBURNER: TOGGLE', 'boostToggle'),
+      this.toggle('BOOST: TOGGLE', 'boostToggle'),
       this.toggle('AIM ASSIST', 'aimAssist'),
       this.toggle('AUTO-FIRE', 'autoFire'),
       { label: 'REBIND KEYS', action: () => this.showRebind() },
@@ -778,7 +789,22 @@ export class App {
         ['easy', 'normal', 'hard'],
         (v) => (s.difficulty = v),
       ),
-      this.toggle('ANONYMOUS STATS', 'analytics'),
+      this.toggle('ANONYMOUS STATS & ERROR REPORTS', 'analytics'),
+      {
+        label: 'DELETE MY LEADERBOARD SCORES',
+        action: () => {
+          void this.leaderboard
+            .deleteMine(this.save.profile.playerId)
+            .then((r) =>
+              this.toast(
+                r.online === null && this.leaderboard.configured
+                  ? `Removed ${r.local} local scores — couldn't reach the server, try again online`
+                  : `Removed ${r.local} local${r.online !== null ? ` and ${r.online} online` : ''} scores`,
+              ),
+            );
+        },
+      },
+      { label: 'PRIVACY POLICY', action: () => window.open('./privacy.html', '_blank', 'noopener') },
       {
         label: 'CALLSIGN',
         value: () => this.save.profile.name,
@@ -1192,6 +1218,7 @@ export class App {
 
     if (!this.view) return;
     this.view.render(this.sim, alpha, frameDt);
+    this.hud.touchSafe = this.input.touch.state.active;
     if (this.hud.visible)
       this.hud.draw(this.sim, this.view.rig.camera, alpha, frameDt, this.view.interpolatedPlayer);
     const live =

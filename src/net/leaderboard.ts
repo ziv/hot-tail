@@ -86,6 +86,26 @@ export class Leaderboard {
     };
   }
 
+  /** Privacy: erase this player's scores locally and on the server. */
+  async deleteMine(playerId: string): Promise<{ local: number; online: number | null }> {
+    const local = await this.local.deletePlayer(playerId);
+    this.persist();
+    let online: number | null = null;
+    if (API !== undefined) {
+      try {
+        const res = await fetchJson<{ deleted: number }>(`${API}/api/scores/delete`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ playerId }),
+        });
+        online = res.deleted;
+      } catch {
+        online = null;
+      }
+    }
+    return { local, online };
+  }
+
   /** Would this score make the local top 20 (for the name-entry prompt)? */
   async qualifies(mode: LbMode, score: number): Promise<boolean> {
     if (score <= 0) return false;
