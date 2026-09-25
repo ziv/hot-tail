@@ -17,7 +17,7 @@ class MemoryStore implements KeyValueStore {
 describe('save system (J1)', () => {
   it('creates a fresh v2 save with an anonymous player id', () => {
     const save = loadSave(new MemoryStore());
-    expect(save.version).toBe(2);
+    expect(save.version).toBe(3);
     expect(save.profile.playerId).toMatch(/^[0-9a-f]{24}$/);
     expect(save.settings.difficulty).toBe('normal');
   });
@@ -30,29 +30,35 @@ describe('save system (J1)', () => {
     );
     store.setItem('hot-tail.hiscore', '123456');
     const save = loadSave(store);
-    expect(save.version).toBe(2);
+    expect(save.version).toBe(3);
     expect(save.settings.quality).toBe('low');
     expect(save.settings.master).toBe(0.3);
     expect(save.settings.invertY).toBe(true);
     expect(save.progress.bests.arcade).toBe(123456);
     // Legacy keys are replaced by the unified document.
     expect(store.getItem('hot-tail.settings')).toBeNull();
-    expect(JSON.parse(store.getItem(SAVE_KEY)!).version).toBe(2);
+    expect(JSON.parse(store.getItem(SAVE_KEY)!).version).toBe(3);
   });
 
   it('fills fields added later and survives corrupt data', () => {
     const store = new MemoryStore();
     store.setItem(
       SAVE_KEY,
-      JSON.stringify({ version: 2, settings: { music: 0.1 }, progress: { furthestStage: 3 } }),
+      JSON.stringify({
+        version: 2,
+        attract: { data: 'old' },
+        settings: { music: 0.1 },
+        progress: { furthestStage: 3 },
+      }),
     );
     const save = loadSave(store);
     expect(save.settings.music).toBe(0.1);
     expect(save.settings.palette).toBe('default');
     expect(save.progress.furthestStage).toBe(3);
     expect(save.progress.bests.scoreAttack).toBe(0);
+    expect(save.attract).toBeNull(); // v2 raw-frame demos are dropped by the v3 migration
     store.setItem(SAVE_KEY, '{nope');
-    expect(loadSave(store).version).toBe(2);
+    expect(loadSave(store).version).toBe(3);
   });
 
   it('round-trips through write/load and replay encoding', () => {

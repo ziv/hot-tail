@@ -26,9 +26,14 @@ export interface ScoreSubmission {
   replay?: string;
 }
 
+export type ScoreStatus = 'pending' | 'verified' | 'rejected' | 'unverifiable';
+
 export interface ScoreRow extends ScoreSubmission {
+  id?: number;
   createdAt: number;
   ipHash: string;
+  /** Replay validation state (J4). Rejected rows never appear on boards. */
+  status?: ScoreStatus;
 }
 
 export interface ScoreEntry {
@@ -38,6 +43,7 @@ export interface ScoreEntry {
   stage: number;
   jet: string;
   createdAt: number;
+  status?: ScoreStatus;
   me?: boolean;
 }
 
@@ -49,6 +55,9 @@ export interface ScoreStore {
   rankOf(mode: LbMode, since: number, playerId: string): Promise<number>;
   countRecent(playerId: string, ipHash: string, since: number): Promise<number>;
   bestOf(mode: LbMode, since: number, playerId: string): Promise<number>;
+  /** Oldest rows awaiting replay validation. */
+  pending(limit: number): Promise<(ScoreRow & { id: number })[]>;
+  setStatus(id: number, status: ScoreStatus): Promise<void>;
 }
 
 const BLOCKED = [
@@ -160,13 +169,22 @@ export class MemoryScoreStore implements ScoreStore {
   constructor(public rows: ScoreRow[] = []) {}
 
   async insert(row: ScoreRow): Promise<void> {
-    this.rows.push(row);
+    this.rows.push({ ...row, id: this.rows.length + 1, status: row.status ?? 'unverifiable' });
+  }
+
+  async pending(limit: number): Promise<(ScoreRow & { id: number })[]> {
+    return this.rows.filter((r) => r.status === 'pending').slice(0, limit) as (ScoreRow & { id: number })[];
+  }
+
+  async setStatus(id: number, status: ScoreStatus): Promise<void> {
+    const row = this.rows.find((r) => r.id === id);
+    if (row) row.status = status;
   }
 
   private bests(mode: LbMode, since: number): ScoreRow[] {
     const best = new Map<string, ScoreRow>();
     for (const r of this.rows) {
-      if (r.mode !== mode || r.createdAt < since) continue;
+      if (r.mode !== mode || r.createdAt < since || r.status === 'rejected') continue;
       const cur = best.get(r.playerId);
       if (!cur || r.score > cur.score || (r.score === cur.score && r.createdAt < cur.createdAt))
         best.set(r.playerId, r);
@@ -184,6 +202,7 @@ export class MemoryScoreStore implements ScoreStore {
         stage: r.stage,
         jet: r.jet,
         createdAt: r.createdAt,
+        status: r.status,
       }));
   }
 
@@ -223,7 +242,7 @@ export async function submitScore(
   const recent = await store.countRecent(sub.playerId, ipHash, now - RATE_LIMIT.window);
   if (recent >= RATE_LIMIT.max) return { status: 429, body: { error: 'rate limited' } };
   const prevBest = await store.bestOf(sub.mode, 0, sub.playerId);
-  await store.insert({ ...sub, createdAt: now, ipHash });
+  await store.insert({ ...sub, createdAt: now, ipHash, status: sub.replay ? 'pending' : 'unverifiable' });
   return {
     status: 200,
     body: {
@@ -247,4 +266,24 @@ export async function aroundMe(
   const offset = Math.max(0, rank - 1 - span);
   const rows = await store.top(mode, since, span * 2 + 1, offset);
   return rows.map((r) => ({ ...r, me: r.rank === rank }));
+}
+
+export type RunValidator = (replay: string, score: number) => ScoreStatus;
+
+/**
+ * Validates queued submissions (J4): re-simulates each replay and marks the
+ * row verified or rejected. Called from the API's scheduled handler.
+ */
+export async function processPending(store: ScoreStore, validate: RunValidator, limit = 5): Promise<number> {
+  const rows = await store.pending(limit);
+  for (const r of rows) {
+    let status: ScoreStatus;
+    try {
+      status = r.replay ? validate(r.replay, r.score) : 'unverifiable';
+    } catch {
+      status = 'rejected';
+    }
+    await store.setStatus(r.id, status);
+  }
+  return rows.length;
 }

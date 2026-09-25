@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`deterministic math > produces fixed golden bit patterns (catches engine/implementation drift) 1`] = `
+[
+  "3fee33c23ed44442",
+  "3fd62f45e66f5c2f",
+  "3fee7078b0a726a6",
+  "3ff441f5ecbeef58",
+]
+`;

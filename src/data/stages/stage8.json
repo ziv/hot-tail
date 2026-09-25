@@ -1,0 +1,218 @@
+{
+  "id": "s8",
+  "index": 8,
+  "name": "HIGH RIDGE",
+  "subtitle": "Ride the ridgeline at sunset",
+  "biome": "mountains",
+  "lighting": "mountainDusk",
+  "cruise": 360,
+  "duration": 84,
+  "music": "mountains",
+  "rail": [
+    [0, 0, 190],
+    [4000, -220, 220],
+    [8000, 180, 200],
+    [12000, -120, 240],
+    [16000, 260, 210],
+    [20000, -60, 230],
+    [24000, 140, 190],
+    [28000, -200, 220],
+    [32000, 0, 210],
+    [50000, 0, 210]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "mountains"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 8",
+      "sub": "HIGH RIDGE",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 7,
+      "formation": "v",
+      "spacing": 45
+    },
+    {
+      "t": 6,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 3,
+      "formation": "v",
+      "spacing": 160,
+      "y": 30
+    },
+    {
+      "t": 10,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 3,
+      "formation": "line",
+      "spacing": 220
+    },
+    {
+      "t": 12,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 4,
+      "formation": "line",
+      "spacing": 100,
+      "params": {
+        "breakaway": 2,
+        "weave": 30
+      }
+    },
+    {
+      "t": 17,
+      "type": "callout",
+      "text": "AWACS on the ridge \u2014 bonus target!"
+    },
+    {
+      "t": 17.5,
+      "type": "wave",
+      "enemy": "awacs",
+      "count": 1,
+      "y": 120
+    },
+    {
+      "t": 21,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 2,
+      "formation": "line",
+      "spacing": 260,
+      "y": 20,
+      "params": {
+        "holdTime": 8
+      }
+    },
+    {
+      "t": 27,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "right",
+      "stagger": 0.2,
+      "params": {
+        "z": -1000
+      }
+    },
+    {
+      "t": 30,
+      "type": "callout",
+      "text": "Bandits on your six!"
+    },
+    {
+      "t": 30.5,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 4,
+      "formation": "line",
+      "spacing": 60,
+      "params": {
+        "holdTime": 7
+      }
+    },
+    {
+      "t": 35,
+      "type": "loop"
+    },
+    {
+      "t": 40,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 3,
+      "formation": "line",
+      "spacing": 180
+    },
+    {
+      "t": 43,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 5,
+      "formation": "column",
+      "spacing": 120
+    },
+    {
+      "t": 47,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 5,
+      "formation": "v",
+      "spacing": 85,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 50,
+      "type": "speed",
+      "value": 1.15
+    },
+    {
+      "t": 52,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 2,
+      "formation": "line",
+      "spacing": 200,
+      "y": 40
+    },
+    {
+      "t": 56,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 4,
+      "formation": "scatter",
+      "spacing": 180
+    },
+    {
+      "t": 60,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "circle",
+      "params": {
+        "radius": 90,
+        "spin": -1.3
+      }
+    },
+    {
+      "t": 65,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 1,
+      "y": 10,
+      "params": {
+        "holdTime": 10
+      }
+    },
+    {
+      "t": 67,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 4,
+      "formation": "line",
+      "spacing": 100,
+      "params": {
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 74,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "scatter",
+      "spacing": 80
+    }
+  ]
+}

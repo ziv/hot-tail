@@ -1,5 +1,5 @@
 import { Quaternion, Vector3 } from 'three';
-import type { BaseEntity } from '@/core/ecs';
+import type { BaseEntity } from '../core/ecs';
 import type { EnemyDef, SpawnSpec } from './defs';
 import type { PartDef } from './boss';
 
@@ -89,6 +89,15 @@ export interface BossState {
   entering: boolean;
   dying: number;
   spawnTimer: number;
+  /** Attitude (Euler XYZ) accumulated by spin and death spirals. */
+  spin: number;
+  dieRoll: number;
+  diePitch: number;
+  /** Jink target (stealth ace) and timer. */
+  jink: { x: number; y: number; z: number; t: number };
+  /** Seconds of cloak remaining (0 = visible) and time to next cloak. */
+  cloak: number;
+  cloakTimer: number;
 }
 
 export interface Entity extends BaseEntity {

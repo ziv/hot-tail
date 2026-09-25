@@ -27,6 +27,16 @@ import {
   tank,
   tanker,
 } from './models-m3';
+import {
+  bossBay,
+  bossCockpit,
+  bossJet,
+  bossPanel,
+  bossReactor,
+  bossSilo,
+  orbital,
+  stealth,
+} from './models-m4';
 
 /** Model key (as used by simulation entities) → procedural geometry factory. */
 export const MODEL_FACTORIES: Record<string, () => ModelGeo> = {
@@ -56,6 +66,14 @@ export const MODEL_FACTORIES: Record<string, () => ModelGeo> = {
   bossSam,
   bossBridge,
   tanker,
+  stealth,
+  bossJet,
+  bossBay,
+  bossCockpit,
+  orbital,
+  bossPanel,
+  bossSilo,
+  bossReactor,
 };
 
 /** Render-only scale so small silhouettes stay readable at arcade speed. */
@@ -101,4 +119,12 @@ export const CAPACITY: Record<string, number> = {
   bossSam: 2,
   bossBridge: 1,
   tanker: 1,
+  stealth: 1,
+  bossJet: 2,
+  bossBay: 1,
+  bossCockpit: 1,
+  orbital: 1,
+  bossPanel: 6,
+  bossSilo: 3,
+  bossReactor: 1,
 };

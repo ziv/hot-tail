@@ -54,6 +54,8 @@ async function main(): Promise<void> {
       get score() {
         return app.sim?.score.score ?? 0;
       },
+      /** Cross-engine determinism probe (lazy: only loaded by tests). */
+      probe: async () => (await import('@/sim/probe')).determinismProbe(),
     },
   });
 
@@ -78,8 +80,11 @@ void main();
 function registerServiceWorker(): void {
   if (!('serviceWorker' in navigator)) return;
   let reloading = false;
+  // Only an update (a previous worker was in control) should reload the page —
+  // not the very first install claiming this client.
+  const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
+    if (reloading || !hadController) return;
     reloading = true;
     location.reload();
   });

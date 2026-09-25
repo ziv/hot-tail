@@ -26,6 +26,7 @@ import {
 import type { Sim } from '@/sim/sim';
 import type { Entity } from '@/sim/types';
 import { MODEL_FACTORIES, MODEL_SCALE } from './registry';
+import { cloaked } from './entities';
 
 /**
  * Retro style (open question: "both" visual directions): sprite-scaling
@@ -38,7 +39,7 @@ const YAWS = 12;
 const ELEVS = [0.35, -0.2];
 const ROLL_FRAMES = 16;
 const PLAYER_MODELS = ['player', 'playerDart', 'playerManta'];
-const BIG_MODELS = ['fortress', 'carrier'];
+const BIG_MODELS = ['fortress', 'carrier', 'stealth', 'orbital'];
 
 interface SpriteInfo {
   atlas: number; // 0 = small, 1 = big
@@ -281,7 +282,8 @@ export class RetroRenderer {
 
   update(sim: Sim, alpha: number, camera: Camera, playerPos: Vector3, playerVisible: boolean): void {
     for (const e of sim.world.entities) {
-      if (!e.alive || e.kind === 'bullet' || e.kind === 'ebullet' || e.kind === 'flare') continue;
+      if (!e.alive || e.kind === 'bullet' || e.kind === 'ebullet' || e.kind === 'flare' || cloaked(e))
+        continue;
       this.pushEntity(e, alpha, camera);
     }
     // Player: roll frames seen from behind.

@@ -62,6 +62,8 @@ test('title → jet select → flight via keyboard; leaderboard and settings ope
   await expect(page.getByText('SELECT YOUR JET', { exact: false })).toBeVisible();
   await page.keyboard.press('ArrowRight'); // change jet
   await expect(page.getByText('DART', { exact: false })).toBeVisible();
-  await page.keyboard.press('Enter'); // TAKE OFF
+  await page.keyboard.press('Enter'); // TAKE OFF → carrier take-off cutscene
+  await page.waitForFunction(() => window.__hotTail?.state === 'cutscene');
+  await page.keyboard.press('Enter'); // skip
   await page.waitForFunction(() => window.__hotTail?.state === 'playing');
 });

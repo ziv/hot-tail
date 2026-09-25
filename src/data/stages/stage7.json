@@ -1,0 +1,229 @@
+{
+  "id": "s7",
+  "index": 7,
+  "name": "GLACIER PASS",
+  "subtitle": "Force the mountain pass",
+  "biome": "mountains",
+  "lighting": "mountainDay",
+  "cruise": 355,
+  "duration": 82,
+  "music": "mountains",
+  "rail": [
+    [0, 0, 170],
+    [4000, -220, 200],
+    [8000, 180, 180],
+    [12000, -120, 220],
+    [16000, 260, 190],
+    [20000, -60, 210],
+    [24000, 140, 170],
+    [28000, -200, 200],
+    [32000, 0, 190],
+    [50000, 0, 190]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "mountains"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 7",
+      "sub": "GLACIER PASS",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 4,
+      "formation": "v",
+      "spacing": 85,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 7,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 2,
+      "formation": "line",
+      "spacing": 260
+    },
+    {
+      "t": 9,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "circle",
+      "params": {
+        "radius": 85,
+        "spin": 1.3
+      }
+    },
+    {
+      "t": 13,
+      "type": "callout",
+      "text": "Bandits on your six!"
+    },
+    {
+      "t": 13.5,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 3,
+      "formation": "line",
+      "spacing": 70,
+      "params": {
+        "holdTime": 6
+      }
+    },
+    {
+      "t": 20,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 2,
+      "formation": "line",
+      "spacing": 220
+    },
+    {
+      "t": 24,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 4,
+      "formation": "column",
+      "spacing": 140
+    },
+    {
+      "t": 26,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 5,
+      "formation": "line",
+      "spacing": 90,
+      "variants": [
+        {
+          "formation": "v"
+        }
+      ],
+      "params": {
+        "weave": 45,
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 31,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 2,
+      "formation": "line",
+      "spacing": 180,
+      "y": 40
+    },
+    {
+      "t": 35,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "left",
+      "stagger": 0.2,
+      "params": {
+        "z": -900
+      }
+    },
+    {
+      "t": 38,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 3,
+      "formation": "scatter",
+      "spacing": 200
+    },
+    {
+      "t": 41,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 1,
+      "y": 30,
+      "params": {
+        "holdTime": 9
+      }
+    },
+    {
+      "t": 46,
+      "type": "speed",
+      "value": 1.12
+    },
+    {
+      "t": 48,
+      "type": "wave",
+      "enemy": "tank",
+      "count": 6,
+      "formation": "column",
+      "spacing": 60,
+      "x": -80,
+      "variants": [
+        {
+          "x": 80
+        }
+      ]
+    },
+    {
+      "t": 50,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 4,
+      "formation": "v",
+      "spacing": 90,
+      "params": {
+        "breakaway": 3
+      }
+    },
+    {
+      "t": 56,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 2,
+      "formation": "line",
+      "spacing": 80
+    },
+    {
+      "t": 60,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 3,
+      "formation": "v",
+      "spacing": 150
+    },
+    {
+      "t": 64,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "scatter",
+      "spacing": 70
+    },
+    {
+      "t": 68,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 4,
+      "formation": "line",
+      "spacing": 200
+    },
+    {
+      "t": 72,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 6,
+      "formation": "line",
+      "spacing": 80,
+      "params": {
+        "weave": 50,
+        "breakaway": 1
+      }
+    }
+  ],
+  "threat": 0.85
+}

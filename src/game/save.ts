@@ -31,12 +31,15 @@ export interface Settings {
   palette: HudPalette;
   hudScale: number;
   analytics: boolean;
+  /** K6: 0 = uncapped, else 60 or 30 fps. */
+  frameCap: number;
+  dynamicRes: boolean;
   bindings: Partial<Record<Action, string[]>>;
   seenTips: boolean;
 }
 
 export interface SaveData {
-  version: 2;
+  version: 3;
   settings: Settings;
   profile: { playerId: string; name: string };
   progress: {
@@ -45,7 +48,7 @@ export interface SaveData {
     bests: Record<GameMode, number>;
     jet: JetId;
   };
-  /** Base64 input log of the best stage-1 run, replayed in attract mode (G2). */
+  /** Encoded run replay of the best stage-1 run, replayed in attract mode (G2). */
   attract: { seed: number; jet: JetId; difficulty: Difficulty; data: string; score: number } | null;
   /** Benchmark result (B15); null until measured. */
   benchmark: { quality: QualityLevel; p90: number } | null;
@@ -82,6 +85,8 @@ export function defaultSettings(): Settings {
     palette: 'default',
     hudScale: 1,
     analytics: true,
+    frameCap: 0,
+    dynamicRes: typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches,
     bindings: {},
     seenTips: false,
   };
@@ -95,7 +100,7 @@ export function newPlayerId(): string {
 
 export function defaultSave(): SaveData {
   return {
-    version: 2,
+    version: 3,
     settings: defaultSettings(),
     profile: { playerId: newPlayerId(), name: 'PILOT' },
     progress: { furthestStage: 0, bests: { arcade: 0, scoreAttack: 0, practice: 0 }, jet: 'kestrel' },
@@ -131,12 +136,14 @@ const MIGRATIONS: Record<number, (old: AnySave) => AnySave> = {
       progress: { ...base.progress, bests: { ...base.progress.bests, arcade: hi } },
     };
   },
+  // v2 (M3): attract demo stored raw frames; M4 stores RLE run replays (J4).
+  2: (old) => ({ ...old, version: 3, attract: null }),
 };
 
 export function migrate(doc: AnySave): SaveData {
   let cur = doc;
   let v = cur.version ?? 1;
-  while (v < 2) {
+  while (v < 3) {
     const step = MIGRATIONS[v];
     if (!step) break;
     cur = step(cur);
@@ -148,7 +155,7 @@ export function migrate(doc: AnySave): SaveData {
   return {
     ...base,
     ...out,
-    version: 2,
+    version: 3,
     settings: { ...base.settings, ...out.settings },
     profile: { ...base.profile, ...out.profile },
     progress: {

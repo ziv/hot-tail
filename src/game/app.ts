@@ -3,7 +3,7 @@ import { hashSeed } from '@/core/rng';
 import { Sim } from '@/sim/sim';
 import { EXTRA_STAGES, REFUEL_AFTER, STAGES, onStageReload } from '@/sim/stages';
 import { botInput } from '@/sim/bot';
-import { quantizeInput, ReplayPlayer, ReplayRecorder } from '@/sim/replay';
+import { decodeRun, encodeRun, quantizeInput, ReplayPlayer, RunRecorder } from '@/sim/replay';
 import { JET_ORDER, JETS, type Difficulty, type JetId, type StageDef } from '@/sim/defs';
 import { EMPTY_INPUT, type BonusTally, type InputFrame, type StageStats } from '@/sim/types';
 import { GameView, type VisualStyle } from '@/render/view';
@@ -16,9 +16,10 @@ import { controlsHtml, TIPS } from '@/ui/content';
 import { Leaderboard } from '@/net/leaderboard';
 import { Analytics } from '@/net/analytics';
 import { cleanName, NAME_MAX, weekStart, type LbMode, type LbPeriod } from '../../shared/leaderboard';
-import { decodeFrames, encodeFrames, loadSave, writeSave, type GameMode, type SaveData } from './save';
+import { loadSave, writeSave, type GameMode, type SaveData } from './save';
 
-export type AppState = 'boot' | 'title' | 'playing' | 'paused' | 'results' | 'refuel' | 'gameover' | 'ending';
+export type AppState =
+  'boot' | 'title' | 'cutscene' | 'playing' | 'paused' | 'results' | 'refuel' | 'gameover' | 'ending';
 
 export interface AppElements {
   canvas: HTMLCanvasElement;
@@ -66,7 +67,8 @@ export class App {
   seed = 1;
   fps = 60;
   readonly errors: string[] = [];
-  private recorder: ReplayRecorder | null = null;
+  /** Whole-run input log with flow marks: attract demos and score validation (J4). */
+  private run: RunRecorder | null = null;
   private attractReplay: ReplayPlayer | null = null;
   private readonly raw: InputFrame = { x: 0, y: 0, buttons: 0 };
   private readonly q: InputFrame = { x: 0, y: 0, buttons: 0 };
@@ -137,7 +139,7 @@ export class App {
 
     // Asset manifest (B4): everything is procedural, so "loading" means
     // building meshes/textures, baking sprites and pre-compiling shaders.
-    const tasks: [number, () => void][] = [
+    const tasks: [number, () => unknown][] = [
       [3, () => (this.view = new GameView(this.els.canvas, this.initialQuality()))],
       [1, () => this.newAttract()],
       [2, () => this.settings.style === 'retro' && this.view.setStyle('retro')],
@@ -146,7 +148,7 @@ export class App {
     const total = tasks.reduce((s, t) => s + t[0], 0);
     let done = 0;
     for (const [weight, run] of tasks) {
-      run();
+      await run();
       done += weight;
       bar.style.width = `${Math.round((done / total) * 100)}%`;
       await nextFrame();
@@ -214,19 +216,28 @@ export class App {
   }
 
   private applyViewSettings(): void {
+    this.loop.maxFps = this.settings.frameCap;
     if (!this.view) return;
+    this.view.dynamicResolution = this.settings.dynamicRes;
+    this.view.frameBudget = 1 / (this.settings.frameCap || 60);
     this.view.flashes = this.settings.flashes;
     this.view.rig.shakeScale = this.settings.shake ? 1 : 0;
   }
 
   // ------------------------------------------------------------- sim setup
-  private newSim(seed: number, attract: boolean, options: ConstructorParameters<typeof Sim>[1] = {}): void {
+  private newSim(
+    seed: number,
+    attract: boolean,
+    options: ConstructorParameters<typeof Sim>[1] = {},
+    invincibleDemo = true,
+  ): void {
     for (const off of this.simOffs) off();
     this.simOffs = [];
     this.seed = seed;
     this.attract = attract;
     this.sim = new Sim(seed, options);
-    if (attract) this.sim.cheats.invincible = true;
+    if (attract && invincibleDemo) this.sim.cheats.invincible = true;
+    this.run = null;
     this.view.bind(this.sim);
     this.audio.bind(this.sim);
     this.hud.bind(this.sim);
@@ -253,11 +264,8 @@ export class App {
   private loadStage(def: StageDef, index: number): void {
     this.stageIndex = index;
     this.stageDef = def;
-    // Record the first stage of a fresh run: it can become the attract demo.
-    const fresh = this.sim.tick === 0;
     this.sim.loadStage(def);
     this.view.setStage(this.sim, def);
-    this.recorder = !this.attract && index === 0 && fresh ? new ReplayRecorder(this.seed, 0) : null;
     if (!this.attract) {
       this.analytics.track('stage_start', def.index);
       if (this.mode !== 'practice' && index > this.save.progress.furthestStage) {
@@ -271,9 +279,15 @@ export class App {
   private newAttract(): void {
     const rec = this.save.attract;
     if (rec && !this.attractReplay) {
-      this.newSim(rec.seed, true, { jet: rec.jet, difficulty: rec.difficulty });
-      const frames = decodeFrames(rec.data);
-      this.attractReplay = new ReplayPlayer({ seed: rec.seed, stage: 0, frames, ticks: frames.length / 3 });
+      const rep = decodeRun(rec.data);
+      // Replays must run unmodified (no invincibility) to reproduce exactly.
+      this.newSim(rep.seed, true, rep.options, false);
+      this.attractReplay = new ReplayPlayer({
+        seed: rep.seed,
+        stage: 0,
+        frames: rep.frames,
+        ticks: rep.ticks,
+      });
     } else {
       this.attractReplay = null;
       this.newSim((Math.random() * 1e9) >>> 0, true, { jet: JET_ORDER[Math.floor(Math.random() * 3)] });
@@ -282,9 +296,8 @@ export class App {
   }
 
   private captureAttractReplay(): void {
-    if (!this.recorder || this.stageIndex !== 0) return;
-    const rep = this.recorder.finish();
-    this.recorder = null;
+    if (!this.run || this.run.startStage !== 0 || this.stageIndex !== 0) return;
+    const rep = this.run.finish();
     const score = this.sim.score.score;
     if (this.save.attract && this.save.attract.score >= score) return;
     if (this.sim.options.aimAssist || this.sim.options.autoFire) return; // demo shows unassisted play
@@ -292,7 +305,7 @@ export class App {
       seed: this.seed,
       jet: this.sim.options.jet,
       difficulty: this.sim.options.difficulty,
-      data: encodeFrames(rep.frames),
+      data: encodeRun(rep),
       score,
     };
     this.persist();
@@ -319,6 +332,8 @@ export class App {
       aimAssist: this.settings.aimAssist,
       autoFire: this.settings.autoFire,
     });
+    // Only campaign stages can be validated; practice previews aren't submitted.
+    if (!def || STAGES.includes(def)) this.run = new RunRecorder(seed, this.sim.options, stage);
     this.loadStage(def ?? STAGES[stage], stage);
     this.ui.clear();
     this.state = 'playing';
@@ -327,7 +342,41 @@ export class App {
     this.hud.visible = true;
     this.hud.touchSafe = this.input.lastSource === 'touch';
     this.audio.engine.setMusicDim(false);
+    // Take-off from the carrier (F16) opens a full run.
+    if (!this.opts.autotest && stage === 0 && !def && mode !== 'practice') {
+      this.audio.music.play('ocean');
+      this.playCutscene('takeoff', () => {
+        this.view.setStage(this.sim, STAGES[0]);
+        this.state = 'playing';
+        this.loop.paused = false;
+        this.hud.visible = true;
+        this.input.setGameplayActive(true);
+        this.showFirstRunTips();
+      });
+      return;
+    }
     this.showFirstRunTips();
+  }
+
+  private cutsceneDone: (() => void) | null = null;
+
+  /** Plays a skippable cutscene; the simulation is frozen meanwhile. */
+  private playCutscene(id: 'takeoff' | 'landing', done: () => void): void {
+    this.state = 'cutscene';
+    this.loop.paused = true;
+    this.hud.visible = false;
+    this.hud.clear();
+    this.input.setGameplayActive(false);
+    this.cutsceneDone = done;
+    this.view.playCutscene(id, JETS[this.jet].model, id === 'takeoff' ? 'day' : 'sunset');
+    this.toast('Press Enter / A to skip', 2500);
+  }
+
+  private finishCutscene(): void {
+    const done = this.cutsceneDone;
+    this.cutsceneDone = null;
+    this.view.stopCutscene();
+    done?.();
   }
 
   private showFirstRunTips(): void {
@@ -348,6 +397,7 @@ export class App {
     const next = this.stageIndex + 1;
     if (next >= STAGES.length) return this.showEnding();
     this.ui.clear();
+    this.run?.mark('stage', next);
     this.loadStage(STAGES[next], next);
     this.state = 'playing';
     this.input.setGameplayActive(true);
@@ -407,8 +457,9 @@ export class App {
           { label: 'LEADERBOARD', action: () => this.showLeaderboard('arcade', 'all') },
           { label: 'HOW TO PLAY', action: () => this.showControls() },
           { label: 'SETTINGS', action: () => this.showSettings() },
+          { label: 'CREDITS', action: () => this.showCredits() },
         ],
-        footer: `BEST ${best.toLocaleString()} · <span class="dim">v${__APP_VERSION__} alpha</span>`,
+        footer: `BEST ${best.toLocaleString()} · <span class="dim">v${__APP_VERSION__} beta</span>`,
       }),
     );
   }
@@ -602,10 +653,22 @@ export class App {
         ['modern', 'retro'],
         (v) => {
           s.style = v;
-          this.view.setStyle(v);
+          void this.view.setStyle(v);
         },
         { modern: 'MODERN 3D', retro: 'RETRO SPRITES' },
       ),
+      this.choice<string>(
+        'FRAME RATE CAP',
+        () => String(s.frameCap),
+        ['0', '60', '30'],
+        (v) => (s.frameCap = Number(v)),
+        {
+          '0': 'OFF',
+          '60': '60 FPS',
+          '30': '30 FPS (COOLER)',
+        },
+      ),
+      this.toggle('DYNAMIC RESOLUTION', 'dynamicRes'),
     ]);
   }
 
@@ -739,6 +802,7 @@ export class App {
         // Tanker rendezvous (F15) between stages 5 and 6.
         this.ui.clear();
         this.state = 'refuel';
+        this.run?.mark('refuel');
         this.sim.startRefuel();
         return;
       }
@@ -829,6 +893,7 @@ export class App {
         difficulty: this.sim.options.difficulty,
         seed: this.seed,
         version: __APP_VERSION__,
+        replay: this.run ? encodeRun(this.run.finish()) : undefined,
       });
       this.toast(
         res.rank
@@ -939,7 +1004,7 @@ export class App {
   private showEnding(): void {
     this.state = 'ending';
     const best = this.recordBest();
-    this.audio.music.play('title');
+    this.audio.music.play('ending');
     const board = this.mode === 'scoreAttack' ? 'scoreAttack' : 'arcade';
     const show = () =>
       this.ui.replace(
@@ -947,15 +1012,47 @@ export class App {
           title: 'MISSION COMPLETE',
           subtitle: `FINAL SCORE ${this.sim.score.score.toLocaleString()}${best ? ' — NEW BEST!' : ''}`,
           className: 'ending',
-          body: '<p>The Leviathan is down. Stages 7–18 — mountains, night city and the stratosphere — arrive in the beta.<br/>Thanks for flying the <b>Hot Tail</b> alpha.</p>',
+          body: '<p>The Halo platform is gone and the skies are clear.<br/>Welcome home, pilot.</p>',
           items: [
+            { label: 'CREDITS', action: () => this.showCredits() },
             { label: 'LEADERBOARD', action: () => this.showLeaderboard(board, 'all') },
             { label: 'BACK TO TITLE', action: () => this.showTitle() },
           ],
         }),
       );
     this.ui.clear();
-    void this.submitRun(show);
+    // Landing back aboard the carrier (F16), then results and credits.
+    this.playCutscene('landing', () => {
+      this.state = 'ending';
+      this.loop.paused = false;
+      void this.submitRun(show);
+    });
+  }
+
+  /** Credits (G12). */
+  private showCredits(): void {
+    const roll = document.createElement('div');
+    roll.className = 'credits';
+    roll.innerHTML = `<div class="credits-roll">
+      <h3>HOT TAIL</h3>
+      <p>An arcade jet combat game for the web</p>
+      <h4>Game design &amp; direction</h4><p>Ziv</p>
+      <h4>Programming, procedural art &amp; audio</h4><p>Ziv &amp; Claude (Anthropic)</p>
+      <h4>Built with</h4><p>Three.js · Vite · TypeScript · Web Audio API</p>
+      <h4>Online services</h4><p>Cloudflare Workers &amp; D1</p>
+      <h4>Special thanks</h4><p>The super-scaler arcade games of the 1980s</p>
+      <h4>Music &amp; sound</h4><p>Procedurally synthesised placeholders</p>
+      <p class="dim">Free to play. No ads. Thanks for flying.</p>
+    </div>`;
+    this.ui.push(
+      this.ui.screen({
+        title: 'CREDITS',
+        className: 'credits-screen',
+        body: roll,
+        onBack: () => this.ui.pop(),
+        items: [{ label: 'BACK', action: () => this.ui.pop() }],
+      }),
+    );
   }
 
   /** Leaderboard (G10): all-time/weekly × mode, plus ranks around the player. */
@@ -1038,7 +1135,7 @@ export class App {
     else if (this.state === 'playing') input = this.input.sample(sim, this.raw);
     else input = EMPTY_INPUT;
     quantizeInput(input, this.q);
-    this.recorder?.record(this.q);
+    this.run?.record(this.q);
     sim.step(this.q);
   }
 
@@ -1050,7 +1147,13 @@ export class App {
     }
     this.input.pollGamepad(frameDt);
 
-    if (this.state === 'playing' && this.input.consumePause()) {
+    if (this.state === 'cutscene') {
+      const skip = this.input.consumePause() || !!this.input.consumeNav();
+      while (this.input.consumeNav()) {
+        /* drain */
+      }
+      if (skip || this.view.cutscene.done) this.finishCutscene();
+    } else if (this.state === 'playing' && this.input.consumePause()) {
       this.pause();
       while (this.input.consumeNav()) {
         /* drain */
@@ -1077,7 +1180,11 @@ export class App {
     this.view.render(this.sim, alpha, frameDt);
     if (this.hud.visible)
       this.hud.draw(this.sim, this.view.rig.camera, alpha, frameDt, this.view.interpolatedPlayer);
-    const live = this.state === 'playing' || this.state === 'results' || this.state === 'refuel';
+    const live =
+      this.state === 'playing' ||
+      this.state === 'results' ||
+      this.state === 'refuel' ||
+      this.state === 'cutscene';
     this.audio.frame(this.sim, live, frameDt);
   }
 }

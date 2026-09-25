@@ -1,4 +1,4 @@
-import type { LbMode, ScoreEntry, ScoreRow, ScoreStore } from '../../shared/leaderboard';
+import type { LbMode, ScoreEntry, ScoreRow, ScoreStatus, ScoreStore } from '../../shared/leaderboard';
 import type { EventSink } from './handler';
 
 /** Minimal slice of the Cloudflare D1 API used here (avoids a types dependency). */
@@ -21,11 +21,12 @@ interface Row {
   stage: number;
   jet: string;
   created_at: number;
+  status: ScoreStatus;
 }
 
 // Best score per player: SQLite returns the bare columns of the MAX() row.
-const BEST = `SELECT player_id, name, MAX(score) AS score, stage, jet, created_at
-  FROM scores WHERE mode = ?1 AND created_at >= ?2 GROUP BY player_id`;
+const BEST = `SELECT player_id, name, MAX(score) AS score, stage, jet, created_at, status
+  FROM scores WHERE mode = ?1 AND created_at >= ?2 AND status != 'rejected' GROUP BY player_id`;
 
 export class D1ScoreStore implements ScoreStore {
   constructor(private readonly db: D1Database) {}
@@ -33,8 +34,8 @@ export class D1ScoreStore implements ScoreStore {
   async insert(r: ScoreRow): Promise<void> {
     await this.db
       .prepare(
-        `INSERT INTO scores (player_id, name, score, mode, stage, jet, difficulty, seed, version, replay, ip_hash, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)`,
+        `INSERT INTO scores (player_id, name, score, mode, stage, jet, difficulty, seed, version, replay, ip_hash, created_at, status)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`,
       )
       .bind(
         r.playerId,
@@ -49,6 +50,7 @@ export class D1ScoreStore implements ScoreStore {
         r.replay ?? null,
         r.ipHash,
         r.createdAt,
+        r.status ?? 'unverifiable',
       )
       .run();
   }
@@ -65,7 +67,38 @@ export class D1ScoreStore implements ScoreStore {
       stage: r.stage,
       jet: r.jet,
       createdAt: r.created_at,
+      status: r.status,
     }));
+  }
+
+  async pending(limit: number): Promise<(ScoreRow & { id: number })[]> {
+    const res = await this.db
+      .prepare(
+        `SELECT id, player_id, name, score, mode, stage, jet, difficulty, seed, version, replay, ip_hash, created_at, status
+         FROM scores WHERE status = 'pending' ORDER BY created_at ASC LIMIT ?1`,
+      )
+      .bind(limit)
+      .all<Record<string, unknown>>();
+    return (res.results ?? []).map((r) => ({
+      id: Number(r.id),
+      playerId: String(r.player_id),
+      name: String(r.name),
+      score: Number(r.score),
+      mode: r.mode as LbMode,
+      stage: Number(r.stage),
+      jet: String(r.jet),
+      difficulty: String(r.difficulty),
+      seed: Number(r.seed),
+      version: String(r.version),
+      replay: r.replay === null ? undefined : String(r.replay),
+      ipHash: String(r.ip_hash),
+      createdAt: Number(r.created_at),
+      status: r.status as ScoreStatus,
+    }));
+  }
+
+  async setStatus(id: number, status: ScoreStatus): Promise<void> {
+    await this.db.prepare('UPDATE scores SET status = ?1 WHERE id = ?2').bind(status, id).run();
   }
 
   async bestOf(mode: LbMode, since: number, playerId: string): Promise<number> {

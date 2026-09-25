@@ -1,8 +1,8 @@
 {
   "name": "afterburner",
   "private": true,
-  "version": "0.3.0",
-  "description": "Hot Tail — arcade-speed jet combat shooter for the web",
+  "version": "0.4.0",
+  "description": "Hot Tail \u2014 arcade-speed jet combat shooter for the web",
   "type": "module",
   "packageManager": "pnpm@10.14.0",
   "engines": {
@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/compress.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -19,7 +19,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "ci": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "balance": "BALANCE=1 vitest run tests/balance.test.ts",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
     "lil-gui": "^0.21.0",

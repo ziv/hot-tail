@@ -15,6 +15,7 @@ import {
   type Texture,
 } from 'three';
 import type { Sim } from '@/sim/sim';
+import { isCloaked } from '@/sim/boss';
 import type { Entity } from '@/sim/types';
 import { enemyBullet, playerBullet, type ModelGeo } from './models';
 import { CAPACITY, MODEL_FACTORIES, MODEL_SCALE } from './registry';
@@ -131,6 +132,7 @@ export class EntityRenderer {
       if (e.kind === 'bullet') this.pushBullet(e, alpha, false);
       else if (e.kind === 'ebullet') this.pushBullet(e, alpha, true);
       else {
+        if (cloaked(e)) continue;
         const model = this.models.get(e.model);
         if (!model) continue;
         interpolate(e, alpha, _p, _q);
@@ -172,6 +174,12 @@ export class EntityRenderer {
       this.bullets.setMatrixAt(this.nb++, _m);
     }
   }
+}
+
+/** Boss 3's hull and weak points vanish while it is cloaked (radar still shows it). */
+export function cloaked(e: Entity): boolean {
+  const boss = e.boss ? e : e.bossPart?.boss;
+  return !!boss && isCloaked(boss);
 }
 
 export function interpolate(e: Entity, alpha: number, pos: Vector3, rot: Quaternion): void {
@@ -260,8 +268,13 @@ export class PlayerView {
     interpolate(p.e, alpha, this.group.position, this.group.quaternion);
     const blink = p.invuln > 0 && Math.floor(time * 14) % 2 === 0;
     this.group.visible = !p.dead && !blink;
-    const power = Math.max(0, Math.min(1, (p.speedFactor - 1) / 0.6));
-    const brake = Math.max(0, Math.min(1, (1 - p.speedFactor) / 0.4));
+    this.setThrottle(p.speedFactor, time);
+  }
+
+  /** Afterburner flame from a throttle factor (0.6 brake … 1 cruise … 1.6 boost). */
+  setThrottle(speedFactor: number, time: number): void {
+    const power = Math.max(0, Math.min(1, (speedFactor - 1) / 0.6));
+    const brake = Math.max(0, Math.min(1, (1 - speedFactor) / 0.4));
     const len = 3.2 + power * 9 - brake * 2.2 + Math.sin(time * 70) * 0.3;
     for (const f of this.flames) f.scale.set(1 + power * 0.25, 1 + power * 0.25, Math.max(0.6, len));
     this.flameMat.uniforms.uPower.value = power;

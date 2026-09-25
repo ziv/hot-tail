@@ -1,0 +1,223 @@
+{
+  "id": "s11",
+  "index": 11,
+  "name": "CITY LIGHTS",
+  "subtitle": "Thread the towers to the coast",
+  "biome": "city",
+  "lighting": "cityNight",
+  "cruise": 370,
+  "duration": 86,
+  "music": "city",
+  "rail": [
+    [0, 0, 140],
+    [4000, 90, 150],
+    [8000, -110, 140],
+    [12000, 60, 165],
+    [16000, -80, 145],
+    [20000, 120, 155],
+    [24000, -40, 140],
+    [28000, 80, 160],
+    [50000, 0, 150]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "city"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 11",
+      "sub": "CITY LIGHTS",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "v",
+      "spacing": 45
+    },
+    {
+      "t": 6,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 3,
+      "formation": "line",
+      "spacing": 200
+    },
+    {
+      "t": 9,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 5,
+      "formation": "line",
+      "spacing": 90,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 13,
+      "type": "callout",
+      "text": "Bandits on your six!"
+    },
+    {
+      "t": 13.5,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 4,
+      "formation": "line",
+      "spacing": 60,
+      "params": {
+        "holdTime": 7
+      }
+    },
+    {
+      "t": 18,
+      "type": "loop"
+    },
+    {
+      "t": 23,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 3,
+      "formation": "v",
+      "spacing": 160
+    },
+    {
+      "t": 26,
+      "type": "wave",
+      "enemy": "tank",
+      "count": 8,
+      "formation": "column",
+      "spacing": 55,
+      "x": -50
+    },
+    {
+      "t": 28,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 5,
+      "formation": "line",
+      "spacing": 150
+    },
+    {
+      "t": 32,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 2,
+      "formation": "line",
+      "spacing": 260,
+      "params": {
+        "holdTime": 8
+      }
+    },
+    {
+      "t": 38,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "circle",
+      "params": {
+        "radius": 90,
+        "spin": -1.2
+      }
+    },
+    {
+      "t": 42,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 3,
+      "formation": "line",
+      "spacing": 170,
+      "y": 30
+    },
+    {
+      "t": 46,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 6,
+      "formation": "line",
+      "spacing": 80,
+      "params": {
+        "weave": 50,
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 50,
+      "type": "speed",
+      "value": 1.15
+    },
+    {
+      "t": 52,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 4,
+      "formation": "scatter",
+      "spacing": 170
+    },
+    {
+      "t": 55,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 3,
+      "formation": "line",
+      "spacing": 70
+    },
+    {
+      "t": 60,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 3,
+      "formation": "line",
+      "spacing": 180
+    },
+    {
+      "t": 64,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "left",
+      "stagger": 0.2,
+      "params": {
+        "z": -900
+      }
+    },
+    {
+      "t": 66,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "right",
+      "stagger": 0.2,
+      "params": {
+        "z": -1100
+      }
+    },
+    {
+      "t": 72,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 1,
+      "y": 20,
+      "params": {
+        "holdTime": 10
+      }
+    },
+    {
+      "t": 74,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 5,
+      "formation": "v",
+      "spacing": 85,
+      "params": {
+        "breakaway": 1
+      }
+    }
+  ]
+}

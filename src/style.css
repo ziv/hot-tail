@@ -659,3 +659,53 @@ body.retro::after {
   font-weight: 800;
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------- credits */
+.credits {
+  height: 46vh;
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
+}
+
+.credits-roll {
+  animation: credits-roll 26s linear infinite;
+}
+
+.credits-roll h3 {
+  font: italic 900 30px var(--font);
+  margin: 0 0 4px;
+}
+
+.credits-roll h4 {
+  margin: 26px 0 4px;
+  color: var(--cyan);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.credits-roll p {
+  margin: 0;
+}
+
+@keyframes credits-roll {
+  from {
+    transform: translateY(46vh);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credits-roll {
+    animation: none;
+  }
+  .credits {
+    height: auto;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+}

@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import { tuning } from './tuning';
+import { dacos } from '../core/dmath';
 import { clamp, lookQuaternion, rotateToward } from './math';
 import { Btn, type Entity, type InputFrame } from './types';
 import type { LockSlot } from './player';
@@ -112,7 +113,7 @@ export function findLockTarget(sim: Sim, coneScale: number, airOnly = false): En
     if (dist < lk.rangeMin || dist > lk.rangeMax) continue;
     const cos = _to.dot(p.aim) / dist;
     if (cos <= 0) continue;
-    const angle = Math.acos(clamp(cos, -1, 1));
+    const angle = dacos(clamp(cos, -1, 1));
     // Near targets get a little extra slack so close passes are still lockable.
     const cone = (lk.cone + lk.coneNear / dist) * coneScale;
     if (angle > cone) continue;

@@ -12,12 +12,14 @@ Serverless leaderboard and anonymous gameplay stats for Hot Tail: a Cloudflare W
 | POST | `/api/events` | `{events: [{type, stage, value}]}` → daily aggregates only |
 | GET | `/api/health` | |
 
-Weekly boards reset at Monday 00:00 UTC. Raw IPs are never stored (salted hash only). Replays are stored with each score for the re-simulation check planned in M4 (J4).
+Weekly boards reset at Monday 00:00 UTC. Raw IPs are never stored (salted hash only).
+
+**Score validation (J4).** Submissions carry the run's input log (seed, options, RLE-compressed inputs, stage/refuel marks). They're stored as `pending`; a cron trigger (every minute) re-simulates up to 5 with the exact game simulation (bundled from `src/sim`) and marks them `verified` or `rejected`. Rejected scores never appear; runs recorded by an older simulation version are kept as `unverifiable`. Re-simulating a full 18-stage run takes a few seconds of CPU, so the worker needs the Workers Paid CPU limit (`[limits] cpu_ms`).
 
 ## Deploy
 
 ```bash
-npx wrangler d1 migrations apply hot-tail-dev --local
+npx wrangler d1 migrations apply hot-tail-dev --local   # 0001 init, 0002 replay validation
 npx wrangler dev                      # http://localhost:8787
 npx wrangler deploy --env staging
 ```

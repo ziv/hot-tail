@@ -20,6 +20,7 @@ import {
 import { Rng } from '@/core/rng';
 import type { Rail } from '@/sim/rail';
 import type { Biome } from '@/sim/defs';
+import { BuildingKit, CITY, DESERT, HARBOR, MOUNTAINS, StripKit, type TerrainProfile } from './kits';
 import { fbm, valueNoise } from './noise';
 import type { LightingPreset } from './environment';
 
@@ -36,6 +37,22 @@ const ISLAND_VARIANTS = 5;
 const ROCK_VARIANTS = 3;
 const MAX_PER_VARIANT = 48;
 const MAX_PUFFS = 320;
+
+const STRIP_PROFILES: Partial<Record<Biome, TerrainProfile>> = {
+  desert: DESERT,
+  mountains: MOUNTAINS,
+  city: CITY,
+  harbor: HARBOR,
+};
+
+const CLOUD_DENSITY: Record<Biome, number> = {
+  ocean: 1,
+  desert: 0.5,
+  mountains: 1.2,
+  city: 0.6,
+  harbor: 0.6,
+  stratosphere: 1.6,
+};
 
 const _m = new Matrix4();
 const _q = new Quaternion();
@@ -54,7 +71,8 @@ export class Terrain {
   private c0 = NaN;
   private c1 = NaN;
   private biome: Biome = 'ocean';
-  private readonly canyon = new CanyonKit();
+  private readonly strip = new StripKit();
+  private readonly buildings = new BuildingKit();
 
   constructor() {
     const islandMat = new MeshLambertMaterial({ vertexColors: true });
@@ -76,7 +94,7 @@ export class Terrain {
     }
     this.clouds = new CloudLayer(MAX_PUFFS);
     this.group.add(this.clouds.mesh);
-    this.group.add(this.canyon.group);
+    this.group.add(this.strip.group, this.buildings.mesh);
   }
 
   setStage(rail: Rail, seed: number, biome: Biome = 'ocean'): void {
@@ -86,12 +104,15 @@ export class Terrain {
     this.c0 = this.c1 = NaN;
     const ocean = biome === 'ocean';
     for (const m of [...this.islands, ...this.rocks]) m.visible = ocean;
-    this.canyon.group.visible = !ocean;
-    this.canyon.reset(rail, seed);
+    const profile = STRIP_PROFILES[biome];
+    this.strip.group.visible = !!profile;
+    if (profile) this.strip.reset(rail, seed, profile);
+    this.buildings.mesh.visible = biome === 'city' || biome === 'harbor';
   }
 
   applyPreset(p: LightingPreset): void {
     this.clouds.applyPreset(p);
+    this.buildings.applyPreset(p);
   }
 
   setCloudsVisible(v: boolean): void {
@@ -115,13 +136,16 @@ export class Terrain {
     for (const m of this.islands) m.count = 0;
     for (const m of this.rocks) m.count = 0;
     this.clouds.begin();
-    if (this.biome === 'desert') this.canyon.show(c0, c1, CHUNK);
+    if (STRIP_PROFILES[this.biome]) this.strip.show(c0, c1, CHUNK);
+    const city = this.biome === 'city' || this.biome === 'harbor';
+    this.buildings.begin();
     const sample = { x: 0, y: 0 };
     for (let c = c0; c <= c1; c++) {
       if (c < 0) continue;
       const rng = new Rng(((c * 2654435761) ^ this.seed) >>> 0);
-      if (this.biome === 'desert') {
-        this.addClouds(rng, c, rail, sample, 0.5);
+      if (this.biome !== 'ocean') {
+        if (city) this.buildings.addChunk(c, CHUNK, rail, this.seed, this.biome === 'harbor' ? -1 : 0);
+        this.addClouds(rng, c, rail, sample, CLOUD_DENSITY[this.biome]);
         continue;
       }
       // Islands
@@ -157,6 +181,7 @@ export class Terrain {
     }
     for (const m of [...this.islands, ...this.rocks]) m.instanceMatrix.needsUpdate = true;
     this.clouds.end();
+    this.buildings.end();
   }
 
   private addClouds(
@@ -409,158 +434,4 @@ function cloudTexture(): CanvasTexture {
   const tex = new CanvasTexture(canvas);
   tex.needsUpdate = true;
   return tex;
-}
-
-// ------------------------------------------------------------ desert canyon
-const CANYON_W = 7200;
-const CANYON_COLS = 72;
-const CANYON_ROWS = 18;
-const DUNE = new Color('#d9b27a');
-const SAND_LIGHT = new Color('#e6c48e');
-const STRATA = [new Color('#b86a3c'), new Color('#cf8d58'), new Color('#9a4f2e'), new Color('#c4784a')];
-const MESA_TOP = new Color('#c99462');
-
-/**
- * Desert biome kit: canyon strips that follow the rail, so the floor corridor
- * always bends with the flight path. Each chunk is a faceted heightfield whose
- * vertex rows are laid out relative to the rail's x at that distance. Meshes
- * are pooled and rewritten in place when a new chunk scrolls into range.
- */
-class CanyonKit {
-  readonly group = new Group();
-  private readonly meshes: Mesh[] = [];
-  private readonly assigned = new Map<number, Mesh>();
-  private rail: Rail | null = null;
-  private seed = 1;
-  private readonly mat = new MeshLambertMaterial({ vertexColors: true });
-  private readonly grid = new Float32Array((CANYON_COLS + 1) * (CANYON_ROWS + 1) * 3);
-
-  constructor() {
-    for (let i = 0; i < 10; i++) {
-      const g = new BufferGeometry();
-      const n = CANYON_COLS * CANYON_ROWS * 6;
-      g.setAttribute('position', new Float32BufferAttribute(new Float32Array(n * 3), 3));
-      g.setAttribute('normal', new Float32BufferAttribute(new Float32Array(n * 3), 3));
-      g.setAttribute('color', new Float32BufferAttribute(new Float32Array(n * 3), 3));
-      const m = new Mesh(g, this.mat);
-      m.frustumCulled = false;
-      m.visible = false;
-      m.userData.chunk = -1;
-      this.meshes.push(m);
-      this.group.add(m);
-    }
-  }
-
-  reset(rail: Rail, seed: number): void {
-    this.rail = rail;
-    this.seed = seed;
-    this.assigned.clear();
-    for (const m of this.meshes) {
-      m.visible = false;
-      m.userData.chunk = -1;
-    }
-  }
-
-  /** World-space surface height at lateral offset u from the rail, distance d. */
-  height(u: number, d: number): number {
-    const s = this.seed % 997;
-    const au = Math.abs(u);
-    const w0 = 330 + 90 * valueNoise(d * 0.0011, 3.3, s);
-    const wallH = 170 + 120 * valueNoise(d * 0.0007, 7.1 + Math.sign(u), s);
-    if (au < w0) {
-      const dunes = 5 * Math.sin(u * 0.02 + d * 0.004) * valueNoise(u * 0.004, d * 0.003, s);
-      return Math.max(0, dunes);
-    }
-    const t = Math.min(1, (au - w0) / 170);
-    const wall = wallH * (t * t * (3 - 2 * t));
-    const plateau = au > w0 + 170 ? fbm(u * 0.0012, d * 0.0012, 3, s) * 90 : 0;
-    const mesa = au > w0 + 600 && valueNoise(u * 0.0025 + 11, d * 0.0025, s) > 0.72 ? 140 : 0;
-    return wall + plateau + mesa;
-  }
-
-  show(c0: number, c1: number, chunk: number): void {
-    const rail = this.rail;
-    if (!rail) return;
-    for (const [c, m] of this.assigned) {
-      if (c < c0 || c > c1) {
-        m.visible = false;
-        m.userData.chunk = -1;
-        this.assigned.delete(c);
-      }
-    }
-    for (let c = Math.max(0, c0); c <= c1; c++) {
-      if (this.assigned.has(c)) continue;
-      const m = this.meshes.find((x) => x.userData.chunk === -1);
-      if (!m) break;
-      this.build(m, c, chunk, rail);
-      m.userData.chunk = c;
-      m.visible = true;
-      this.assigned.set(c, m);
-    }
-  }
-
-  private build(mesh: Mesh, c: number, chunk: number, rail: Rail): void {
-    const g = mesh.geometry;
-    const pos = g.getAttribute('position') as Float32BufferAttribute;
-    const col = g.getAttribute('color') as Float32BufferAttribute;
-    const cols = CANYON_COLS;
-    const rows = CANYON_ROWS;
-    const grid = this.grid;
-    const sample = { x: 0, y: 0 };
-    for (let r = 0; r <= rows; r++) {
-      const d = c * chunk + (r / rows) * chunk;
-      rail.sample(d, sample);
-      for (let k = 0; k <= cols; k++) {
-        // Denser columns near the corridor, wider spacing far out.
-        const f = (k / cols) * 2 - 1;
-        const u = Math.sign(f) * Math.pow(Math.abs(f), 1.6) * (CANYON_W / 2);
-        const i = (r * (cols + 1) + k) * 3;
-        grid[i] = sample.x + u;
-        grid[i + 1] = this.height(u, d);
-        grid[i + 2] = -d;
-      }
-    }
-    const pa = pos.array as Float32Array;
-    const ca = col.array as Float32Array;
-    let o = 0;
-    const put = (gi: number, color: Color) => {
-      pa[o] = grid[gi];
-      pa[o + 1] = grid[gi + 1];
-      pa[o + 2] = grid[gi + 2];
-      ca[o] = color.r;
-      ca[o + 1] = color.g;
-      ca[o + 2] = color.b;
-      o += 3;
-    };
-    for (let r = 0; r < rows; r++) {
-      for (let k = 0; k < cols; k++) {
-        const a = (r * (cols + 1) + k) * 3;
-        const b = a + 3;
-        const cc = a + (cols + 1) * 3;
-        const dd = cc + 3;
-        // Triangles wind counter-clockwise seen from above.
-        const h1 = (grid[a + 1] + grid[b + 1] + grid[cc + 1]) / 3;
-        const c1 = this.color(h1, grid[a], grid[a + 2]);
-        put(a, c1);
-        put(b, c1);
-        put(cc, c1);
-        const h2 = (grid[b + 1] + grid[dd + 1] + grid[cc + 1]) / 3;
-        const c2 = this.color(h2, grid[a], grid[a + 2]);
-        put(b, c2);
-        put(dd, c2);
-        put(cc, c2);
-      }
-    }
-    pos.needsUpdate = true;
-    col.needsUpdate = true;
-    g.computeVertexNormals();
-    (g.getAttribute('normal') as Float32BufferAttribute).needsUpdate = true;
-  }
-
-  private color(h: number, x: number, z: number): Color {
-    // Sand patches follow smooth noise per quad, so dunes read as soft bands.
-    if (h < 6) return valueNoise(x * 0.004, z * 0.004, 5) > 0.55 ? SAND_LIGHT : DUNE;
-    if (h > 230) return MESA_TOP;
-    return STRATA[Math.floor(h / 28) % STRATA.length];
-  }
 }

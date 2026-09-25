@@ -55,7 +55,14 @@ export class AudioEngine {
       comp.ratio.value = 4;
       comp.attack.value = 0.004;
       comp.release.value = 0.2;
-      comp.connect(ctx.destination);
+      // H9 mix: glue compressor → brick-wall limiter so stacked explosions never clip.
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -2;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.001;
+      limiter.release.value = 0.08;
+      comp.connect(limiter).connect(ctx.destination);
       this.master = ctx.createGain();
       this.master.connect(comp);
       this.musicDuck = ctx.createGain();

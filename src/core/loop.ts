@@ -16,6 +16,8 @@ export class GameLoop {
   paused = false;
   /** Scales simulation speed (debug slow-mo). */
   timeScale = 1;
+  /** Render/tick cap in frames per second (0 = display rate) for mobile thermals (K6). */
+  maxFps = 0;
   private acc = 0;
   private last = -1;
   private raf = 0;
@@ -36,6 +38,8 @@ export class GameLoop {
 
   private frame = (now: number): void => {
     this.raf = requestAnimationFrame(this.frame);
+    // Skipped frames fold into the next frame's dt, so simulation time is exact.
+    if (this.maxFps > 0 && this.last >= 0 && now - this.last < 1000 / this.maxFps - 2) return;
     let frameDt = this.last < 0 ? TICK_DT : (now - this.last) / 1000;
     this.last = now;
     // Clamp long stalls (tab switches, breakpoints) so we don't spiral.

@@ -1,4 +1,4 @@
-import defaults from '@/data/tuning.json';
+import defaults from '../data/tuning.json';
 
 /**
  * All flight/weapon feel curves live in data (C8) so they can be tuned live

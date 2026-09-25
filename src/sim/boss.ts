@@ -1,5 +1,6 @@
-import { Euler, Vector3 } from 'three';
-import { approach, clamp } from './math';
+import { Vector3 } from 'three';
+import { dcos, dsin } from '../core/dmath';
+import { approach, clamp, quatFromEuler } from './math';
 import { fireAt, spawnEnemy } from './enemies';
 import type { FireSpec } from './defs';
 import type { BossPartState, Entity } from './types';
@@ -9,7 +10,8 @@ import type { Sim } from './sim';
  * Boss framework (F10): a boss is a hull entity plus part entities (weak
  * points) riding on it. Parts are armoured until their phase is active;
  * destroying every part of a phase advances it. Bosses are data (BossDef):
- * Boss 1 "Leviathan" flying fortress (F11) and Boss 2 carrier group (F12).
+ * Boss 1 "Leviathan" flying fortress (F11), Boss 2 carrier group (F12),
+ * Boss 3 stealth ace (F13) and Boss 4 orbital platform (F14).
  */
 interface PartDef {
   role: BossPartState['role'];
@@ -44,6 +46,13 @@ interface BossDef {
   pitch: number;
   parts: PartDef[];
   escorts: EscortDef[];
+  /** 'sway' drifts on sine curves; 'jink' darts between random points. */
+  movement?: 'sway' | 'jink';
+  /** Roll rate (rad/s) of spinning hulls. */
+  spin?: number;
+  /** Periodic cloaking: parts can't be locked or damaged while cloaked. */
+  cloak?: { every: number; duration: number };
+  score?: number;
 }
 
 const TURRET_SPREAD: FireSpec = { pattern: 'spread', interval: 0, count: 3, spreadDeg: 5, speed: 700 };
@@ -52,6 +61,10 @@ const MISSILE: FireSpec = { pattern: 'homing', interval: 0 };
 const CORE_RING: FireSpec = { pattern: 'ring', interval: 0, count: 12, spreadDeg: 13, speed: 620 };
 const CORE_SPREAD: FireSpec = { pattern: 'spread', interval: 0, count: 5, spreadDeg: 8, speed: 760 };
 const FLAK: FireSpec = { pattern: 'flak', interval: 0, speed: 900 };
+const ACE_BURST: FireSpec = { pattern: 'leading', interval: 0, speed: 900 };
+const ACE_SPREAD: FireSpec = { pattern: 'spread', interval: 0, count: 5, spreadDeg: 6, speed: 820 };
+const BIG_RING: FireSpec = { pattern: 'ring', interval: 0, count: 16, spreadDeg: 16, speed: 560 };
+const TIGHT_RING: FireSpec = { pattern: 'ring', interval: 0, count: 10, spreadDeg: 7, speed: 700 };
 
 const BOSSES: Record<string, BossDef> = {
   fortress: {
@@ -157,10 +170,110 @@ const BOSSES: Record<string, BossDef> = {
     ],
     escorts: [{ phase: 2, enemy: 'fighter', every: 6, count: 2, behaviour: 'flyby' }],
   },
+  stealth: {
+    id: 'stealth',
+    name: 'STEALTH ACE "WRAITH"',
+    model: 'stealth',
+    surface: false,
+    start: [0, 80, -2600],
+    holdZ: [-560, -520, -440],
+    swayX: 0,
+    y: 20,
+    pitch: -0.12,
+    movement: 'jink',
+    cloak: { every: 7, duration: 2.6 },
+    parts: [
+      ...[-16, 16].map<PartDef>((x) => ({
+        role: 'engine',
+        model: 'bossJet',
+        offset: [x, 0, 16],
+        hp: 45,
+        radius: 12,
+        phase: 1,
+        fire: [ACE_BURST, ACE_SPREAD],
+        interval: [0.9, 1.5],
+      })),
+      {
+        role: 'turret',
+        model: 'bossBay',
+        offset: [0, -4, -2],
+        hp: 70,
+        radius: 14,
+        phase: 2,
+        fire: [MISSILE, TIGHT_RING, ACE_BURST],
+        interval: [1.1, 1.8],
+      },
+      {
+        role: 'core',
+        model: 'bossCockpit',
+        offset: [0, 5, -20],
+        hp: 90,
+        radius: 12,
+        phase: 3,
+        fire: [ACE_BURST, ACE_SPREAD, TIGHT_RING],
+        interval: [0.7, 1.2],
+      },
+    ],
+    escorts: [{ phase: 2, enemy: 'drone', every: 6, count: 4, behaviour: 'formation' }],
+  },
+  orbital: {
+    id: 'orbital',
+    name: 'ORBITAL PLATFORM "HALO"',
+    model: 'orbital',
+    surface: false,
+    start: [0, 160, -3200],
+    holdZ: [-760, -720, -650],
+    swayX: 60,
+    y: 40,
+    pitch: 0,
+    spin: 0.25,
+    score: 1000000,
+    parts: [
+      ...[0, 1, 2, 3, 4, 5].map<PartDef>((i) => {
+        const a = (i / 6) * Math.PI * 2;
+        return {
+          role: 'turret',
+          model: 'bossPanel',
+          offset: [dcos(a) * 118, dsin(a) * 118, 0],
+          hp: 34,
+          radius: 16,
+          phase: 1,
+          fire: [TURRET_SPREAD, TURRET_LEAD, FLAK],
+          interval: [1.8, 2.8],
+        };
+      }),
+      ...[0, 1, 2].map<PartDef>((i) => {
+        const a = (i / 3) * Math.PI * 2 + Math.PI / 6;
+        return {
+          role: 'engine',
+          model: 'bossSilo',
+          offset: [dcos(a) * 58, dsin(a) * 58, 4],
+          hp: 60,
+          radius: 15,
+          phase: 2,
+          fire: [MISSILE, TIGHT_RING],
+          interval: [2.2, 3.2],
+        };
+      }),
+      {
+        role: 'core',
+        model: 'bossReactor',
+        offset: [0, 0, 8],
+        hp: 170,
+        radius: 20,
+        phase: 3,
+        fire: [BIG_RING, CORE_SPREAD, BIG_RING],
+        interval: [1, 1.5],
+      },
+    ],
+    escorts: [
+      { phase: 2, enemy: 'drone', every: 7, count: 4, behaviour: 'formation' },
+      { phase: 3, enemy: 'fighter', every: 8, count: 2, behaviour: 'flyby' },
+    ],
+  },
 };
 
 const _off = new Vector3();
-const _euler = new Euler();
 
 export function spawnBoss(sim: Sim, id: string): Entity {
   const def = BOSSES[id];
@@ -205,11 +318,26 @@ export function spawnBoss(sim: Sim, id: string): Entity {
     entering: true,
     dying: 0,
     spawnTimer: 5,
+    spin: 0,
+    dieRoll: 0,
+    diePitch: 0,
+    jink: { x: 0, y: def.y, z: def.holdZ[0], t: 0 },
+    cloak: 0,
+    cloakTimer: def.cloak?.every ?? 0,
   };
   syncBossParts(sim);
   for (const p of parts) p.prev.copy(p.pos);
   sim.events.emit('bossSpawn', { name: def.name });
   return boss;
+}
+
+export function bossScore(boss: Entity): number {
+  return BOSSES[boss.boss!.id]?.score ?? 300000;
+}
+
+/** True while a cloaking boss is invisible (parts unlockable and immune). */
+export function isCloaked(boss: Entity): boolean {
+  return (boss.boss?.cloak ?? 0) > 0;
 }
 
 export function updateBosses(sim: Sim, dt: number): void {
@@ -218,9 +346,11 @@ export function updateBosses(sim: Sim, dt: number): void {
     const b = boss.boss!;
     const def = BOSSES[b.id];
     const t = boss.age;
+    b.spin += (def.spin ?? 0) * dt;
 
     if (b.dying > 0) {
       b.dying -= dt;
+      b.cloak = 0;
       if (def.surface) {
         boss.vel.y -= 6 * dt; // sinking
         boss.vel.z = Math.max(-60, boss.vel.z - 40 * dt);
@@ -228,10 +358,9 @@ export function updateBosses(sim: Sim, dt: number): void {
         boss.vel.y -= 40 * dt;
         boss.vel.z = Math.max(-120, boss.vel.z - 60 * dt);
       }
-      _euler.setFromQuaternion(boss.rot);
-      _euler.z += (def.surface ? 0.08 : 0.35) * dt;
-      _euler.x -= 0.08 * dt;
-      boss.rot.setFromEuler(_euler);
+      b.dieRoll += (def.surface ? 0.08 : 0.35) * dt;
+      b.diePitch -= 0.08 * dt;
+      orientBoss(boss, def, t);
       if (sim.rng.chance(0.25)) {
         sim.events.emit('explosion', {
           x: boss.pos.x + sim.rng.range(-150, 150),
@@ -250,24 +379,57 @@ export function updateBosses(sim: Sim, dt: number): void {
 
     const phase = Math.min(3, b.phase);
     const holdZ = def.holdZ[phase - 1];
-    const tx = def.swayX * Math.sin(t * 0.33) * (phase === 3 ? 1.4 : 1);
-    const ty = def.surface ? -sim.railNow.y + def.y : def.y + 20 * Math.sin(t * 0.52);
-    const tz = holdZ + 50 * Math.sin(t * 0.21);
+    let tx: number;
+    let ty: number;
+    let tz: number;
+    if (def.movement === 'jink') {
+      b.jink.t -= dt;
+      if (b.jink.t <= 0 && !b.entering) {
+        b.jink.x = sim.rng.range(-190, 190);
+        b.jink.y = def.y + sim.rng.range(-50, 80);
+        b.jink.z = holdZ + sim.rng.range(-160, 140);
+        b.jink.t = sim.rng.range(1.2, 2.2) - phase * 0.2;
+      }
+      tx = b.jink.x;
+      ty = b.jink.y;
+      tz = b.entering ? holdZ : b.jink.z;
+    } else {
+      tx = def.swayX * dsin(t * 0.33) * (phase === 3 ? 1.4 : 1);
+      ty = def.surface ? -sim.railNow.y + def.y : def.y + 20 * dsin(t * 0.52);
+      tz = holdZ + 50 * dsin(t * 0.21);
+    }
+    const agile = def.movement === 'jink' ? 2.6 : 1;
     if (b.entering) {
       boss.vel.z = clamp((tz - boss.pos.z) * 1.2, -300, 1100);
       boss.vel.x += (clamp((tx - boss.pos.x) * 1.2, -120, 120) - boss.vel.x) * approach(2, dt);
       boss.vel.y += (clamp((ty - boss.pos.y) * 1.2, -80, 80) - boss.vel.y) * approach(2, dt);
       if (boss.pos.z > tz - 40) b.entering = false;
     } else {
-      const k = approach(1.6, dt);
-      boss.vel.x += (clamp((tx - boss.pos.x) * 1.4, -140, 140) - boss.vel.x) * k;
-      boss.vel.y += (clamp((ty - boss.pos.y) * 1.4, -80, 80) - boss.vel.y) * k;
-      boss.vel.z += (clamp((tz - boss.pos.z) * 1.4, -200, 200) - boss.vel.z) * k;
+      const k = approach(1.6 * agile, dt);
+      boss.vel.x += (clamp((tx - boss.pos.x) * 1.4, -140 * agile, 140 * agile) - boss.vel.x) * k;
+      boss.vel.y += (clamp((ty - boss.pos.y) * 1.4, -80 * agile, 80 * agile) - boss.vel.y) * k;
+      boss.vel.z += (clamp((tz - boss.pos.z) * 1.4, -200 * agile, 200 * agile) - boss.vel.z) * k;
     }
-    if (def.surface) _euler.set(0.01 * Math.sin(t * 0.8), -boss.vel.x * 0.002, 0.015 * Math.sin(t * 0.6));
-    // Flying bosses pitch nose-down so the player (behind, above) sees the deck.
-    else _euler.set(def.pitch + boss.vel.y * 0.0012, 0, -boss.vel.x * 0.0035);
-    boss.rot.setFromEuler(_euler);
+    orientBoss(boss, def, t);
+
+    // Cloaking (Boss 3): periodically vanishes; locks drop and hits glance off.
+    if (def.cloak && !b.entering) {
+      if (b.cloak > 0) {
+        b.cloak -= dt;
+        if (b.cloak <= 0) {
+          b.cloak = 0;
+          for (const p of b.parts) if (p.alive) p.lockable = p.bossPart!.phase === b.phase;
+        }
+      } else {
+        b.cloakTimer -= dt;
+        if (b.cloakTimer <= 0) {
+          b.cloakTimer = def.cloak.every;
+          b.cloak = def.cloak.duration;
+          for (const p of b.parts) if (p.alive) p.lockable = false;
+          sim.events.emit('callout', { text: 'It cloaked — watch the radar!' });
+        }
+      }
+    }
 
     if (b.entering || sim.player.dead || sim.state !== 'playing') continue;
 
@@ -300,6 +462,29 @@ export function updateBosses(sim: Sim, dt: number): void {
         });
       }
     }
+  }
+}
+
+function orientBoss(boss: Entity, def: BossDef, t: number): void {
+  const b = boss.boss!;
+  if (def.surface) {
+    quatFromEuler(
+      0.01 * dsin(t * 0.8) + b.diePitch,
+      -boss.vel.x * 0.002,
+      0.015 * dsin(t * 0.6) + b.dieRoll,
+      'XYZ',
+      boss.rot,
+    );
+  } else {
+    // Flying bosses pitch nose-down so the player (behind, above) sees the deck.
+    const bank = def.movement === 'jink' ? -boss.vel.x * 0.005 : -boss.vel.x * 0.0035;
+    quatFromEuler(
+      def.pitch + boss.vel.y * 0.0012 + b.diePitch,
+      0,
+      bank + b.spin + b.dieRoll,
+      'XYZ',
+      boss.rot,
+    );
   }
 }
 

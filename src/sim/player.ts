@@ -1,14 +1,17 @@
-import { Euler, Vector3 } from 'three';
+import { Vector3 } from 'three';
+import { dacos } from '../core/dmath';
 import { tuning } from './tuning';
 import { approach, easeInOut } from './math';
 import { Btn, createEntity, EMPTY_INPUT, type Entity, type InputFrame, type Throttle } from './types';
-import { clamp } from './math';
+import { clamp, quatFromEuler } from './math';
 import type { JetDef } from './defs';
 import type { Sim } from './sim';
 
 /** Duration of the scripted loop manoeuvre (C5). */
 export const LOOP_DURATION = 2.8;
 export const FLARES_PER_LIFE = 3;
+/** Invulnerability after taking a hit (balance pass, E10). */
+export const HIT_MERCY = 0.6;
 
 export interface LockSlot {
   e: Entity;
@@ -98,8 +101,6 @@ export function createPlayer(jet: JetDef): PlayerState {
     lastStickX: 0,
   };
 }
-
-const _euler = new Euler(0, 0, 0, 'YXZ');
 
 export function updatePlayer(sim: Sim, input: InputFrame, dt: number): void {
   const p = sim.player;
@@ -194,8 +195,7 @@ export function updatePlayer(sim: Sim, input: InputFrame, dt: number): void {
   if (sim.options.aimAssist) applyAimAssist(sim);
   p.bank = -p.stickX * f.bankMax;
   p.pitch = p.stickY * f.pitchVisual;
-  _euler.set(p.pitch + p.loopAngle, -p.stickX * 0.16, p.bank + p.rollAngle);
-  e.rot.setFromEuler(_euler);
+  quatFromEuler(p.pitch + p.loopAngle, -p.stickX * 0.16, p.bank + p.rollAngle, 'YXZ', e.rot);
 }
 
 function updateRollGesture(sim: Sim, input: InputFrame): void {
@@ -249,7 +249,7 @@ function applyAimAssist(sim: Sim): void {
     _to.subVectors(t.pos, p.e.pos);
     const d = _to.length();
     if (d < 150 || d > 1900) continue;
-    const ang = Math.acos(clamp(_to.dot(p.aim) / d, -1, 1));
+    const ang = dacos(clamp(_to.dot(p.aim) / d, -1, 1));
     if (ang < best) {
       best = ang;
       bx = _to.x / d;
@@ -281,6 +281,8 @@ export function damagePlayer(sim: Sim, amount: number): boolean {
   sim.hitStop = Math.max(sim.hitStop, 3);
   sim.events.emit('playerHit', { damage: dmg, armor: p.armor });
   if (p.armor <= 0) killPlayer(sim);
+  // Brief mercy frames so one salvo can't chain two hits into a cheap death.
+  else p.invuln = Math.max(p.invuln, HIT_MERCY);
   return true;
 }
 

@@ -1,0 +1,228 @@
+{
+  "id": "s9",
+  "index": 9,
+  "name": "STORM FRONT",
+  "subtitle": "Fly blind through the storm",
+  "biome": "mountains",
+  "lighting": "storm",
+  "cruise": 360,
+  "duration": 86,
+  "music": "mountains",
+  "rail": [
+    [0, 0, 180],
+    [4000, -220, 210],
+    [8000, 180, 190],
+    [12000, -120, 230],
+    [16000, 260, 200],
+    [20000, -60, 220],
+    [24000, 140, 180],
+    [28000, -200, 210],
+    [32000, 0, 200],
+    [50000, 0, 200]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "mountains"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 9",
+      "sub": "STORM FRONT",
+      "duration": 3
+    },
+    {
+      "t": 2,
+      "type": "clouds",
+      "on": true
+    },
+    {
+      "t": 3.5,
+      "type": "banner",
+      "text": "CLOUD COVER",
+      "sub": "TRUST YOUR RADAR",
+      "duration": 2.5
+    },
+    {
+      "t": 5,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "scatter",
+      "spacing": 70
+    },
+    {
+      "t": 9,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 4,
+      "formation": "v",
+      "spacing": 90,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 13,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 2,
+      "formation": "line",
+      "spacing": 200
+    },
+    {
+      "t": 17,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 3,
+      "formation": "line",
+      "spacing": 70,
+      "params": {
+        "holdTime": 6
+      }
+    },
+    {
+      "t": 21,
+      "type": "clouds",
+      "on": false
+    },
+    {
+      "t": 22,
+      "type": "wave",
+      "enemy": "sam",
+      "count": 3,
+      "formation": "line",
+      "spacing": 240
+    },
+    {
+      "t": 24,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 3,
+      "formation": "v",
+      "spacing": 150,
+      "y": 30
+    },
+    {
+      "t": 28,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 1,
+      "y": 20
+    },
+    {
+      "t": 32,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "left",
+      "stagger": 0.2,
+      "params": {
+        "z": -900
+      }
+    },
+    {
+      "t": 36,
+      "type": "clouds",
+      "on": true
+    },
+    {
+      "t": 37,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 6,
+      "formation": "line",
+      "spacing": 80,
+      "params": {
+        "weave": 50,
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 42,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "circle",
+      "params": {
+        "radius": 85,
+        "spin": 1.2
+      }
+    },
+    {
+      "t": 46,
+      "type": "callout",
+      "text": "AWACS in the storm!"
+    },
+    {
+      "t": 46.5,
+      "type": "wave",
+      "enemy": "awacs",
+      "count": 1,
+      "y": 80
+    },
+    {
+      "t": 50,
+      "type": "clouds",
+      "on": false
+    },
+    {
+      "t": 51,
+      "type": "speed",
+      "value": 1.15
+    },
+    {
+      "t": 52,
+      "type": "wave",
+      "enemy": "aaa",
+      "count": 5,
+      "formation": "line",
+      "spacing": 180
+    },
+    {
+      "t": 55,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 4,
+      "formation": "line",
+      "spacing": 60
+    },
+    {
+      "t": 60,
+      "type": "loop"
+    },
+    {
+      "t": 64,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 3,
+      "formation": "v",
+      "spacing": 160
+    },
+    {
+      "t": 68,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 2,
+      "formation": "line",
+      "spacing": 260,
+      "params": {
+        "holdTime": 8
+      }
+    },
+    {
+      "t": 76,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 6,
+      "formation": "v",
+      "spacing": 80,
+      "params": {
+        "breakaway": 1
+      }
+    }
+  ],
+  "threat": 0.9
+}

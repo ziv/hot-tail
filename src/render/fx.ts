@@ -143,6 +143,27 @@ export class Fx {
   /** Continuous per-frame emitters: trails, afterburner, damage smoke. */
   frame(sim: Sim, alpha: number, dt: number, playerPos: Vector3): void {
     const n = Math.min(3, Math.max(1, Math.round(dt * 90)));
+    // Cloaked boss: a faint heat shimmer is all that gives it away.
+    for (const b of sim.bosses.items) {
+      if (!b.alive || !(b.boss!.cloak > 0)) continue;
+      for (let i = 0; i < 2; i++)
+        this.puff(
+          this.fx,
+          b.pos.x + this.rng.range(-45, 45),
+          b.pos.y + this.rng.range(-4, 6),
+          b.pos.z + this.rng.range(-30, 20),
+          0,
+          0,
+          0,
+          0.25,
+          10,
+          16,
+          C.cyanDim,
+          C.cyanDim,
+          0.25,
+          0,
+        );
+    }
     // Flares: blinding magnesium sparks with a smoke tail.
     for (const f of sim.flares.items) {
       if (!f.alive) continue;

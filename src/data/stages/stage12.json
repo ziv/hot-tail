@@ -1,14 +1,13 @@
 {
-  "id": "x1",
+  "id": "s12",
   "index": 12,
   "name": "TRIDENT",
-  "subtitle": "Sink the carrier group",
-  "biome": "ocean",
-  "lighting": "sunset",
-  "cruise": 320,
-  "duration": 30,
-  "music": "ocean",
-  "mirror": false,
+  "subtitle": "Sink the carrier group in the harbour",
+  "biome": "harbor",
+  "lighting": "cityNight",
+  "cruise": 330,
+  "duration": 34,
+  "music": "city",
   "rail": [
     [0, 0, 125],
     [6000, 120, 120],
@@ -20,7 +19,7 @@
     {
       "t": 0,
       "type": "music",
-      "track": "ocean"
+      "track": "city"
     },
     {
       "t": 0.5,
@@ -33,7 +32,7 @@
       "t": 3,
       "type": "wave",
       "enemy": "fighter",
-      "count": 3,
+      "count": 4,
       "formation": "v",
       "spacing": 90,
       "params": {
@@ -52,7 +51,17 @@
       }
     },
     {
-      "t": 11,
+      "t": 10,
+      "type": "wave",
+      "enemy": "destroyer",
+      "count": 1,
+      "x": -150,
+      "params": {
+        "dir": -1
+      }
+    },
+    {
+      "t": 12,
       "type": "wave",
       "enemy": "gunship",
       "count": 2,
@@ -61,20 +70,30 @@
     },
     {
       "t": 16,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 2,
+      "formation": "line",
+      "spacing": 80
+    },
+    {
+      "t": 20,
       "type": "music",
       "track": "boss"
     },
     {
-      "t": 16,
+      "t": 20,
       "type": "banner",
       "text": "WARNING",
       "sub": "CARRIER GROUP DEAD AHEAD",
       "duration": 4
     },
     {
-      "t": 19,
+      "t": 23,
       "type": "boss",
       "id": "carrier"
     }
-  ]
+  ],
+  "mirror": false,
+  "threat": 0.8
 }

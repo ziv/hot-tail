@@ -1,6 +1,7 @@
 import { Quaternion, Vector3 } from 'three';
 import { tuning } from './tuning';
-import { approach, clamp, lookQuaternion, moveToward } from './math';
+import { approach, clamp, lookQuaternion, moveToward, nlerp, quatFromAxisAngle } from './math';
+import { dcos, dsin } from '../core/dmath';
 import { enemyDef, type FireSpec, type Formation, type From, type SpawnSpec, type WaveEvent } from './defs';
 import type { Entity, EnemyState } from './types';
 import type { Sim } from './sim';
@@ -78,8 +79,8 @@ export function expandWave(sim: Sim, ev: WaveEvent): { delay: number; spec: Spaw
       case 'circle': {
         const a = (i / n) * Math.PI * 2;
         const r = params.radius ?? spacing;
-        ox = Math.cos(a) * r;
-        oy = Math.sin(a) * r * 0.7;
+        ox = dcos(a) * r;
+        oy = dsin(a) * r * 0.7;
         break;
       }
       case 'scatter':
@@ -239,7 +240,7 @@ function flyby(sim: Sim, e: Entity, s: EnemyState, dt: number): void {
     }
     const wa = pr.weave ?? 0;
     const wf = pr.weaveFreq ?? 1.4;
-    e.vel.x = s.aux.x + wa * wf * Math.cos(wf * s.phaseTime + (pr.member ?? 0) * 0.6);
+    e.vel.x = s.aux.x + wa * wf * dcos(wf * s.phaseTime + (pr.member ?? 0) * 0.6);
     e.vel.y = s.aux.y;
     e.vel.z = speed;
     const mode = pr.breakaway ?? 1;
@@ -290,7 +291,7 @@ function pursuit(sim: Sim, e: Entity, s: EnemyState, dt: number): void {
       break;
     default:
       e.vel.z = moveToward(e.vel.z, -110, 200 * dt);
-      e.vel.x = moveToward(e.vel.x, 60 * Math.sin(s.phaseTime * 1.3 + s.member), 200 * dt);
+      e.vel.x = moveToward(e.vel.x, 60 * dsin(s.phaseTime * 1.3 + s.member), 200 * dt);
       e.vel.y = moveToward(e.vel.y, 20, 100 * dt);
   }
 }
@@ -303,15 +304,15 @@ function formation(e: Entity, s: EnemyState): void {
   if (spin !== 0) {
     const r = pr.radius ?? 60;
     const a = (pr.angle ?? 0) + spin * t;
-    e.vel.x = -r * spin * Math.sin(a);
-    e.vel.y = r * spin * Math.cos(a) * 0.7;
+    e.vel.x = -r * spin * dsin(a);
+    e.vel.y = r * spin * dcos(a) * 0.7;
   } else {
     const ax = pr.ampX ?? 60;
     const ay = pr.ampY ?? 18;
     const f = pr.freq ?? 1.5;
     const ph = (pr.member ?? 0) * (pr.phaseStep ?? 0.55);
-    e.vel.x = ax * f * Math.cos(f * t + ph) + (pr.driftX ?? 0);
-    e.vel.y = ay * f * 0.7 * Math.cos(f * 0.7 * t + ph) + (pr.driftY ?? 0);
+    e.vel.x = ax * f * dcos(f * t + ph) + (pr.driftX ?? 0);
+    e.vel.y = ay * f * 0.7 * dcos(f * 0.7 * t + ph) + (pr.driftY ?? 0);
   }
 }
 
@@ -321,7 +322,7 @@ function strafe(e: Entity, s: EnemyState): void {
   e.vel.x = s.aux.x * s.def.speed * 0.75;
   e.vel.z = pr.vz ?? 40;
   const ay = pr.ampY ?? 25;
-  e.vel.y = ay * 1.5 * Math.cos(1.5 * t + (pr.member ?? 0) * 0.5);
+  e.vel.y = ay * 1.5 * dcos(1.5 * t + (pr.member ?? 0) * 0.5);
 }
 
 function evade(sim: Sim, e: Entity, s: EnemyState, dt: number): void {
@@ -411,7 +412,7 @@ function updateGuns(sim: Sim, e: Entity, s: EnemyState, dt: number): void {
     const spec = fire[i];
     const g = s.guns[i];
     if (!g) continue;
-    g.timer -= dt * tuning.enemy.fireRateScale * sim.fireRateScale;
+    g.timer -= dt * tuning.enemy.fireRateScale * sim.fireRateScale * (sim.diff.enemyFire[s.def.id] ?? 1);
     if (g.timer <= 0) {
       g.timer += spec.interval * sim.rng.range(0.85, 1.15);
       if (spec.chance === undefined || sim.rng.chance(spec.chance)) {
@@ -449,7 +450,7 @@ export function fireAt(sim: Sim, from: Vector3, spec: FireSpec): void {
       const n = spec.count ?? 3;
       const step = ((spec.spreadDeg ?? 10) * Math.PI) / 180;
       for (let k = 0; k < n; k++) {
-        _q.setFromAxisAngle(Y_AXIS, (k - (n - 1) / 2) * step);
+        quatFromAxisAngle(Y_AXIS, (k - (n - 1) / 2) * step, _q);
         _u.copy(_dir).applyQuaternion(_q);
         spawnEnemyBullet(sim, from, _u, speed);
       }
@@ -464,9 +465,9 @@ export function fireAt(sim: Sim, from: Vector3, spec: FireSpec): void {
         const phi = (k / n) * Math.PI * 2;
         _face
           .copy(_dir)
-          .multiplyScalar(Math.cos(cone))
-          .addScaledVector(_u, Math.cos(phi) * Math.sin(cone))
-          .addScaledVector(_w, Math.sin(phi) * Math.sin(cone));
+          .multiplyScalar(dcos(cone))
+          .addScaledVector(_u, dcos(phi) * dsin(cone))
+          .addScaledVector(_w, dsin(phi) * dsin(cone));
         spawnEnemyBullet(sim, from, _face, speed);
       }
       break;
@@ -500,7 +501,7 @@ export function spawnEnemyMissile(sim: Sim, from: Vector3, dir: Vector3): Entity
   const m = sim.spawn('emissile', 'emissile', 'air');
   m.pos.copy(from).addScaledVector(dir, 14);
   m.prev.copy(m.pos);
-  const speed = tuning.enemy.missileSpeed;
+  const speed = tuning.enemy.missileSpeed * sim.diff.missileSpeed;
   m.vel.copy(dir).multiplyScalar(speed);
   m.radius = 5;
   m.hp = m.maxHp = 1;
@@ -534,7 +535,7 @@ function orient(sim: Sim, e: Entity, s: EnemyState, dt: number, snap: boolean): 
   s.bank += (target - s.bank) * approach(snap ? 1000 : 4, dt);
   lookQuaternion(_face, s.bank, _q);
   if (snap) e.rot.copy(_q);
-  else e.rot.slerp(_q, approach(6, dt));
+  else nlerp(e.rot, _q, approach(6, dt));
 }
 
 function catmull(points: number[][], u: number, out: Vector3): Vector3 {

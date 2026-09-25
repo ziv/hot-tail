@@ -1,8 +1,8 @@
 import { Vector3 } from 'three';
-import { EventBus } from '@/core/events';
-import { Pool, World } from '@/core/ecs';
-import { Rng } from '@/core/rng';
-import { TICK_DT } from '@/core/loop';
+import { EventBus } from '../core/events';
+import { Pool, World } from '../core/ecs';
+import { Rng } from '../core/rng';
+import { TICK_DT } from '../core/loop';
 import { SpatialHash, sweptSpheres } from './collision';
 import { Director } from './director';
 import { Rail, type RailSample } from './rail';
@@ -18,7 +18,7 @@ import {
 } from './player';
 import { updatePlayerWeapons, updateMissile } from './weapons';
 import { updateEnemies } from './enemies';
-import { onBossPartDestroyed, syncBossParts, updateBosses } from './boss';
+import { bossScore, isCloaked, onBossPartDestroyed, syncBossParts, updateBosses } from './boss';
 import { approach, clamp } from './math';
 import {
   DIFFICULTY,
@@ -141,7 +141,7 @@ export class Sim {
   /** Enemy fire-rate multiplier: difficulty plus dynamic easing. */
   get fireRateScale(): number {
     const eased = this.options.dynamicDifficulty && this.score.stats.deaths >= 2 ? 0.8 : 1;
-    return this.diff.fireRate * eased;
+    return this.diff.fireRate * eased * (this.stage?.threat ?? 1);
   }
 
   loadStage(def: StageDef): void {
@@ -352,7 +352,7 @@ export class Sim {
   damage(target: Entity, amount: number): void {
     if (!target.alive) return;
     const part = target.bossPart;
-    if (part && part.phase !== part.boss.boss!.phase) {
+    if (part && (part.phase !== part.boss.boss!.phase || isCloaked(part.boss))) {
       this.events.emit('hit', { target, x: target.pos.x, y: target.pos.y, z: target.pos.z, armored: true });
       return;
     }
@@ -375,7 +375,7 @@ export class Sim {
       size = 'large';
       this.hitStop = 4;
     } else if (target.boss) {
-      base = 300000;
+      base = bossScore(target);
       size = 'huge';
     }
     const { points, multiplier } = this.score.kill(base);

@@ -1,4 +1,5 @@
 import { Btn, type InputFrame } from './types';
+import { dsin } from '../core/dmath';
 import type { Sim } from './sim';
 
 /**
@@ -8,8 +9,8 @@ import type { Sim } from './sim';
 export function botInput(sim: Sim, out: InputFrame): InputFrame {
   const t = sim.tick / 60;
   const pe = sim.player.e.pos;
-  let tx = Math.sin(t * 0.7) * 80;
-  let ty = Math.sin(t * 0.45) * 30;
+  let tx = dsin(t * 0.7) * 80;
+  let ty = dsin(t * 0.45) * 30;
   // Steer toward the nearest enemy in front.
   let best = Infinity;
   for (const e of sim.targets.items) {

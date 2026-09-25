@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Sim, type SimOptions } from '@/sim/sim';
-import { EXTRA_STAGES, STAGES } from '@/sim/stages';
+import { STAGES } from '@/sim/stages';
 import { spawnEnemy } from '@/sim/enemies';
 import { botInput } from '@/sim/bot';
 import { tuning } from '@/sim/tuning';
@@ -205,15 +205,19 @@ describe('Content', () => {
     },
   );
 
-  it('Boss 2 carrier group advances through all phases', () => {
+  it.each([
+    ['Boss 2 carrier group', 11, 23],
+    ['Boss 3 stealth ace', 15, 33],
+    ['Boss 4 orbital platform', 17, 30],
+  ])('%s advances through all phases', (_n, stage, t) => {
     const sim = new Sim(7);
     sim.cheats.invincible = true;
     sim.cheats.infiniteMissiles = true;
     const phases: number[] = [];
     sim.events.on('bossPhase', (e) => phases.push(e.phase));
-    sim.loadStage(EXTRA_STAGES[0]);
-    sim.director!.jumpTo(sim, 19);
-    runBot(sim, 240, () => sim.state !== 'playing');
+    sim.loadStage(STAGES[stage]);
+    sim.director!.jumpTo(sim, t);
+    runBot(sim, 300, () => sim.state !== 'playing');
     expect(phases).toEqual([2, 3]);
     expect(sim.state).toBe('cleared');
   });

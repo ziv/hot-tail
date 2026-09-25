@@ -7,6 +7,14 @@ name = "hot-tail-api"
 main = "src/worker.ts"
 compatibility_date = "2026-09-01"
 
+# Replay validation (J4) runs off the request path, a few scores per minute.
+[triggers]
+crons = ["* * * * *"]
+
+# Re-simulating a full run is CPU-heavy (seconds); needs the Workers Paid plan limit.
+[limits]
+cpu_ms = 30000
+
 [vars]
 ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:4173"
 

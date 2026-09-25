@@ -1,0 +1,103 @@
+{
+  "id": "s16",
+  "index": 16,
+  "name": "WRAITH",
+  "subtitle": "Duel the stealth ace above the clouds",
+  "biome": "stratosphere",
+  "lighting": "stratoLow",
+  "cruise": 360,
+  "duration": 42,
+  "music": "strato",
+  "rail": [
+    [0, 0, 900],
+    [5000, 300, 980],
+    [10000, -250, 940],
+    [15000, 120, 1020],
+    [20000, -150, 960],
+    [25000, 0, 1000],
+    [60000, 0, 1000]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "strato"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 16",
+      "sub": "WRAITH",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 5,
+      "formation": "v",
+      "spacing": 85,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 7,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "circle",
+      "params": {
+        "radius": 90,
+        "spin": 1.3
+      }
+    },
+    {
+      "t": 12,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 2,
+      "formation": "line",
+      "spacing": 260,
+      "params": {
+        "holdTime": 7
+      }
+    },
+    {
+      "t": 20,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 3,
+      "formation": "line",
+      "spacing": 70
+    },
+    {
+      "t": 25,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "left",
+      "stagger": 0.2,
+      "params": {
+        "z": -900
+      }
+    },
+    {
+      "t": 29,
+      "type": "music",
+      "track": "boss"
+    },
+    {
+      "t": 29,
+      "type": "banner",
+      "text": "WARNING",
+      "sub": "STEALTH ACE INBOUND \u2014 IT CLOAKS",
+      "duration": 4
+    },
+    {
+      "t": 33,
+      "type": "boss",
+      "id": "stealth"
+    }
+  ]
+}

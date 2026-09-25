@@ -35,6 +35,10 @@ export interface LightingPreset {
   cloudShade: string;
   exposure: number;
   bloom: number;
+  /** 0..1: star field strength (night, edge of space). */
+  stars?: number;
+  /** 0..1: how many city windows are lit. */
+  night?: number;
 }
 
 export const PRESETS: Record<LightingId, LightingPreset> = {
@@ -138,6 +142,151 @@ export const PRESETS: Record<LightingId, LightingPreset> = {
     exposure: 1.05,
     bloom: 0.8,
   },
+  mountainDay: {
+    zenith: '#2c62b8',
+    horizon: '#cfe0ee',
+    below: '#b8c8d6',
+    fog: '#c3d5e4',
+    fogNear: 1000,
+    fogFar: 7000,
+    sunDir: [0.4, 0.66, -0.64],
+    sunColor: '#fff6e6',
+    sunIntensity: 2.8,
+    hemiSky: '#dcebff',
+    hemiGround: '#3e4a3a',
+    hemiIntensity: 1.1,
+    waterDeep: '#0b3a5e',
+    waterShallow: '#1e7d9c',
+    cloudLit: '#ffffff',
+    cloudShade: '#aebdd0',
+    exposure: 1.0,
+    bloom: 0.5,
+  },
+  mountainDusk: {
+    zenith: '#2a2c66',
+    horizon: '#ff9f6e',
+    below: '#b8708a',
+    fog: '#b87c8a',
+    fogNear: 800,
+    fogFar: 6000,
+    sunDir: [-0.5, 0.1, -0.86],
+    sunColor: '#ffa36a',
+    sunIntensity: 2.6,
+    hemiSky: '#ffc4a8',
+    hemiGround: '#2e2a40',
+    hemiIntensity: 0.9,
+    waterDeep: '#15213f',
+    waterShallow: '#5a4a66',
+    cloudLit: '#ffc6a8',
+    cloudShade: '#6e5a82',
+    exposure: 1.02,
+    bloom: 0.75,
+  },
+  storm: {
+    zenith: '#3a4450',
+    horizon: '#8a949c',
+    below: '#6a737a',
+    fog: '#7c868e',
+    fogNear: 400,
+    fogFar: 3600,
+    sunDir: [0.2, 0.8, -0.5],
+    sunColor: '#c8d0d8',
+    sunIntensity: 1.3,
+    hemiSky: '#aab4bc',
+    hemiGround: '#303438',
+    hemiIntensity: 1.2,
+    waterDeep: '#1a2630',
+    waterShallow: '#3a4a54',
+    cloudLit: '#c4cad0',
+    cloudShade: '#6a727a',
+    exposure: 1.05,
+    bloom: 0.45,
+  },
+  cityNight: {
+    zenith: '#05070f',
+    horizon: '#2a2440',
+    below: '#161522',
+    fog: '#1c1a2c',
+    fogNear: 500,
+    fogFar: 5200,
+    sunDir: [0.3, 0.5, -0.8],
+    sunColor: '#56648a',
+    sunIntensity: 0.55,
+    hemiSky: '#4a5680',
+    hemiGround: '#141018',
+    hemiIntensity: 0.7,
+    waterDeep: '#04060e',
+    waterShallow: '#141a30',
+    cloudLit: '#5a5a7a',
+    cloudShade: '#242438',
+    exposure: 1.1,
+    bloom: 1.0,
+    stars: 0.7,
+    night: 1,
+  },
+  cityDawn: {
+    zenith: '#3a5c9c',
+    horizon: '#ffc59a',
+    below: '#d8a08a',
+    fog: '#d8b0a0',
+    fogNear: 800,
+    fogFar: 6200,
+    sunDir: [0.6, 0.14, -0.78],
+    sunColor: '#ffc896',
+    sunIntensity: 2.4,
+    hemiSky: '#ffd8c0',
+    hemiGround: '#3a3040',
+    hemiIntensity: 0.95,
+    waterDeep: '#15213f',
+    waterShallow: '#5a4a66',
+    cloudLit: '#ffe0c8',
+    cloudShade: '#9a8aa8',
+    exposure: 1.0,
+    bloom: 0.65,
+    night: 0.25,
+  },
+  stratoLow: {
+    zenith: '#0e2c78',
+    horizon: '#9cc4f0',
+    below: '#e8eef6',
+    fog: '#b8d0ec',
+    fogNear: 2000,
+    fogFar: 9000,
+    sunDir: [0.35, 0.45, -0.82],
+    sunColor: '#ffffff',
+    sunIntensity: 3,
+    hemiSky: '#cfe0ff',
+    hemiGround: '#c8d4e4',
+    hemiIntensity: 1.2,
+    waterDeep: '#0b3a5e',
+    waterShallow: '#1e7d9c',
+    cloudLit: '#ffffff',
+    cloudShade: '#c0cce0',
+    exposure: 1.0,
+    bloom: 0.55,
+    stars: 0.1,
+  },
+  stratoSpace: {
+    zenith: '#01030a',
+    horizon: '#3a6ab8',
+    below: '#dbe6f4',
+    fog: '#5f84bf',
+    fogNear: 3000,
+    fogFar: 11000,
+    sunDir: [-0.35, 0.3, -0.88],
+    sunColor: '#ffffff',
+    sunIntensity: 3.4,
+    hemiSky: '#9ab4e8',
+    hemiGround: '#c8d4e4',
+    hemiIntensity: 1.0,
+    waterDeep: '#0b3a5e',
+    waterShallow: '#1e7d9c',
+    cloudLit: '#ffffff',
+    cloudShade: '#aeb8cc',
+    exposure: 1.0,
+    bloom: 0.7,
+    stars: 1,
+  },
 };
 
 const skyVertex = /* glsl */ `
@@ -155,12 +304,24 @@ export const SKY_FUNCTION = /* glsl */ `
   uniform vec3 uBelow;
   uniform vec3 uSunDir;
   uniform vec3 uSunColor;
+  uniform float uStars;
+  float starHash(vec3 p) {
+    p = fract(p * 0.3183099 + 0.1);
+    p *= 17.0;
+    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+  }
   vec3 skyColor(vec3 dir, float sunDisc) {
     float h = dir.y;
     vec3 col = mix(uHorizon, uZenith, pow(clamp(h, 0.0, 1.0), 0.55));
     col = mix(col, uBelow, smoothstep(0.0, -0.12, h));
     float s = max(dot(dir, uSunDir), 0.0);
-    col += uSunColor * (pow(s, 900.0) * 12.0 * sunDisc + pow(s, 10.0) * 0.35 + pow(s, 3.0) * 0.12);
+    float glow = 1.0 - 0.75 * uStars;
+    col += uSunColor * (pow(s, 900.0) * 12.0 * sunDisc + (pow(s, 10.0) * 0.35 + pow(s, 3.0) * 0.12) * glow);
+    if (uStars > 0.0 && h > 0.0) {
+      vec3 cell = floor(dir * 420.0);
+      float st = step(0.9988, starHash(cell)) * smoothstep(0.02, 0.3, h) * sunDisc;
+      col += vec3(st * uStars * 0.9);
+    }
     return col;
   }
 `;
@@ -180,6 +341,7 @@ export function skyUniforms() {
     uBelow: { value: new Color() },
     uSunDir: { value: new Vector3(0, 1, 0) },
     uSunColor: { value: new Color() },
+    uStars: { value: 0 },
   };
 }
 
@@ -191,6 +353,7 @@ export function applySkyUniforms(u: SkyUniforms, p: LightingPreset): void {
   u.uBelow.value.set(p.below);
   u.uSunDir.value.set(...p.sunDir).normalize();
   u.uSunColor.value.set(p.sunColor);
+  u.uStars.value = p.stars ?? 0;
 }
 
 export class Environment {

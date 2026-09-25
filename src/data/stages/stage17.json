@@ -1,0 +1,212 @@
+{
+  "id": "s17",
+  "index": 17,
+  "name": "EDGE OF SPACE",
+  "subtitle": "Climb through their final defence line",
+  "biome": "stratosphere",
+  "lighting": "stratoSpace",
+  "cruise": 385,
+  "duration": 88,
+  "music": "strato",
+  "rail": [
+    [0, 0, 1400],
+    [5000, 300, 1480],
+    [10000, -250, 1440],
+    [15000, 120, 1520],
+    [20000, -150, 1460],
+    [25000, 0, 1500],
+    [60000, 0, 1500]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "strato"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 17",
+      "sub": "EDGE OF SPACE",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 10,
+      "formation": "circle",
+      "params": {
+        "radius": 100,
+        "spin": 1.5
+      }
+    },
+    {
+      "t": 8,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 6,
+      "formation": "v",
+      "spacing": 80,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 12,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 2,
+      "formation": "line",
+      "spacing": 250,
+      "params": {
+        "holdTime": 8
+      }
+    },
+    {
+      "t": 18,
+      "type": "callout",
+      "text": "Bandits on your six!"
+    },
+    {
+      "t": 18.5,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 4,
+      "formation": "line",
+      "spacing": 60
+    },
+    {
+      "t": 23,
+      "type": "loop"
+    },
+    {
+      "t": 27,
+      "type": "wave",
+      "enemy": "bomber",
+      "count": 4,
+      "formation": "line",
+      "spacing": 160,
+      "y": 30
+    },
+    {
+      "t": 31,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 8,
+      "formation": "scatter",
+      "spacing": 80
+    },
+    {
+      "t": 35,
+      "type": "wave",
+      "enemy": "gunship",
+      "count": 3,
+      "formation": "v",
+      "spacing": 150
+    },
+    {
+      "t": 39,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 6,
+      "formation": "line",
+      "spacing": 80,
+      "params": {
+        "weave": 50,
+        "breakaway": 2
+      }
+    },
+    {
+      "t": 43,
+      "type": "speed",
+      "value": 1.2
+    },
+    {
+      "t": 45,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 3,
+      "formation": "line",
+      "spacing": 220,
+      "params": {
+        "holdTime": 8
+      }
+    },
+    {
+      "t": 52,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "left",
+      "stagger": 0.2,
+      "params": {
+        "z": -900
+      }
+    },
+    {
+      "t": 54,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 6,
+      "from": "right",
+      "stagger": 0.2,
+      "params": {
+        "z": -1100
+      }
+    },
+    {
+      "t": 58,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 4,
+      "formation": "line",
+      "spacing": 60
+    },
+    {
+      "t": 63,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 8,
+      "formation": "line",
+      "spacing": 70,
+      "params": {
+        "breakaway": 3
+      }
+    },
+    {
+      "t": 68,
+      "type": "callout",
+      "text": "AWACS \u2014 last bonus target!"
+    },
+    {
+      "t": 68.5,
+      "type": "wave",
+      "enemy": "awacs",
+      "count": 1,
+      "y": 100
+    },
+    {
+      "t": 72,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 2,
+      "formation": "line",
+      "spacing": 260,
+      "params": {
+        "holdTime": 9
+      }
+    },
+    {
+      "t": 78,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 10,
+      "formation": "circle",
+      "params": {
+        "radius": 110,
+        "spin": -1.5
+      }
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "id": "s18",
+  "index": 18,
+  "name": "HALO",
+  "subtitle": "Destroy the orbital platform",
+  "biome": "stratosphere",
+  "lighting": "stratoSpace",
+  "cruise": 360,
+  "duration": 40,
+  "music": "strato",
+  "rail": [
+    [0, 0, 1800],
+    [5000, 300, 1880],
+    [10000, -250, 1840],
+    [15000, 120, 1920],
+    [20000, -150, 1860],
+    [25000, 0, 1900],
+    [60000, 0, 1900]
+  ],
+  "events": [
+    {
+      "t": 0,
+      "type": "music",
+      "track": "strato"
+    },
+    {
+      "t": 0.5,
+      "type": "banner",
+      "text": "STAGE 18",
+      "sub": "HALO",
+      "duration": 3
+    },
+    {
+      "t": 3,
+      "type": "wave",
+      "enemy": "fighter",
+      "count": 6,
+      "formation": "v",
+      "spacing": 80,
+      "params": {
+        "breakaway": 1
+      }
+    },
+    {
+      "t": 8,
+      "type": "wave",
+      "enemy": "ace",
+      "count": 2,
+      "formation": "line",
+      "spacing": 260,
+      "params": {
+        "holdTime": 7
+      }
+    },
+    {
+      "t": 15,
+      "type": "wave",
+      "enemy": "drone",
+      "count": 10,
+      "formation": "circle",
+      "params": {
+        "radius": 100,
+        "spin": 1.5
+      }
+    },
+    {
+      "t": 20,
+      "type": "wave",
+      "enemy": "chaser",
+      "count": 3,
+      "formation": "line",
+      "spacing": 70
+    },
+    {
+      "t": 26,
+      "type": "music",
+      "track": "finalBoss"
+    },
+    {
+      "t": 26,
+      "type": "banner",
+      "text": "WARNING",
+      "sub": "ORBITAL PLATFORM \u2014 FINAL TARGET",
+      "duration": 4
+    },
+    {
+      "t": 30,
+      "type": "boss",
+      "id": "orbital"
+    }
+  ]
+}
