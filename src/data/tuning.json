@@ -1,0 +1,77 @@
+{
+  "flight": {
+    "envelopeX": 125,
+    "envelopeY": 58,
+    "maxLatSpeed": 200,
+    "maxVertSpeed": 140,
+    "response": 5.5,
+    "stickSmoothing": 8,
+    "aimYaw": 0.2,
+    "aimPitch": 0.14,
+    "bankMax": 1.1,
+    "pitchVisual": 0.32,
+    "edgeSoftness": 18
+  },
+  "throttle": {
+    "boost": 1.6,
+    "brake": 0.6,
+    "rate": 2.4
+  },
+  "roll": {
+    "duration": 0.65,
+    "immunity": 0.5,
+    "cooldown": 2,
+    "lateralBoost": 170,
+    "doubleFlickWindow": 0.32,
+    "flickThreshold": 0.9,
+    "centerThreshold": 0.3
+  },
+  "vulcan": {
+    "rate": 20,
+    "speed": 2700,
+    "life": 0.72,
+    "spread": 0.006,
+    "damage": 1
+  },
+  "lock": {
+    "cone": 0.1,
+    "coneNear": 14,
+    "rangeMin": 120,
+    "rangeMax": 2500,
+    "interval": 0.09,
+    "maxLocks": 6
+  },
+  "missile": {
+    "ammo": 100,
+    "speed0": 420,
+    "speedMax": 1300,
+    "accel": 2400,
+    "navGain": 4,
+    "turnRate": 7,
+    "life": 3.2,
+    "damage": 10,
+    "fuse": 12,
+    "volleyGap": 0.06
+  },
+  "player": {
+    "armor": 4,
+    "lives": 3,
+    "respawnDelay": 2.2,
+    "invuln": 2.5,
+    "radius": 7
+  },
+  "enemy": {
+    "fireRateScale": 1,
+    "bulletSpeedScale": 1,
+    "bulletRadius": 3.5,
+    "missileSpeed": 480,
+    "missileTurnRate": 1.6,
+    "missileLife": 6
+  },
+  "score": {
+    "comboWindow": 1.5,
+    "comboMax": 8,
+    "extraLifeFirst": 1000000,
+    "extraLifeEvery": 2000000
+  }
+}

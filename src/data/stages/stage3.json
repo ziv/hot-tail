@@ -1,0 +1,35 @@
+{
+  "id": "s3",
+  "index": 3,
+  "name": "LEVIATHAN",
+  "subtitle": "Intercept the sky fortress",
+  "biome": "ocean",
+  "lighting": "dusk",
+  "cruise": 340,
+  "duration": 45,
+  "music": "ocean",
+  "rail": [
+    [0, 0, 140],
+    [4000, 180, 160],
+    [8000, -150, 130],
+    [12000, 0, 170],
+    [16000, 250, 150],
+    [20000, 0, 140],
+    [60000, 0, 140]
+  ],
+  "events": [
+    { "t": 0, "type": "music", "track": "ocean" },
+    { "t": 0.5, "type": "banner", "text": "STAGE 3", "sub": "LEVIATHAN", "duration": 3 },
+    { "t": 3, "type": "wave", "enemy": "drone", "count": 7, "formation": "v", "spacing": 45 },
+    { "t": 7, "type": "wave", "enemy": "fighter", "count": 3, "formation": "line", "spacing": 120, "params": { "breakaway": 2, "weave": 30 } },
+    { "t": 11, "type": "wave", "enemy": "chaser", "count": 2, "formation": "line", "spacing": 80, "params": { "holdTime": 4 } },
+    { "t": 16, "type": "wave", "enemy": "drone", "count": 8, "formation": "circle", "params": { "radius": 90, "spin": 1.1 } },
+    { "t": 20, "type": "wave", "enemy": "fighter", "count": 4, "formation": "v", "spacing": 90, "params": { "breakaway": 1 } },
+    { "t": 24, "type": "wave", "enemy": "ace", "count": 1, "y": 20, "params": { "holdTime": 8 } },
+    { "t": 26, "type": "wave", "enemy": "drone", "count": 6, "from": "left", "stagger": 0.2, "params": { "z": -900 } },
+    { "t": 29, "type": "wave", "enemy": "drone", "count": 6, "from": "right", "stagger": 0.2, "params": { "z": -1100 } },
+    { "t": 37, "type": "music", "track": "boss" },
+    { "t": 37, "type": "banner", "text": "WARNING", "sub": "HUGE AIRBORNE FORTRESS APPROACHING", "duration": 4 },
+    { "t": 41, "type": "boss", "id": "fortress" }
+  ]
+}

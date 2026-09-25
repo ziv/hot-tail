@@ -1,0 +1,43 @@
+{
+  "id": "s1",
+  "index": 1,
+  "name": "OPEN SEA",
+  "subtitle": "Break through the forward screen",
+  "biome": "ocean",
+  "lighting": "day",
+  "cruise": 330,
+  "duration": 70,
+  "music": "ocean",
+  "rail": [
+    [0, 0, 130],
+    [3000, 120, 150],
+    [6500, -180, 120],
+    [10000, 60, 170],
+    [14000, 300, 140],
+    [18000, 0, 115],
+    [22000, -260, 160],
+    [26000, 0, 140],
+    [40000, 0, 140]
+  ],
+  "events": [
+    { "t": 0, "type": "music", "track": "ocean" },
+    { "t": 0.5, "type": "banner", "text": "STAGE 1", "sub": "OPEN SEA", "duration": 3 },
+    { "t": 3, "type": "wave", "enemy": "drone", "count": 5, "formation": "v", "x": 0, "y": 10, "spacing": 45 },
+    { "t": 7, "type": "wave", "enemy": "drone", "count": 5, "formation": "line", "x": -60, "y": -10, "spacing": 45, "params": { "ampX": 40 } },
+    { "t": 11, "type": "wave", "enemy": "fighter", "count": 2, "formation": "line", "spacing": 140, "y": 15, "params": { "breakaway": 1 } },
+    { "t": 15, "type": "wave", "enemy": "drone", "count": 6, "formation": "column", "x": 50, "y": 0, "spacing": 50, "params": { "ampX": 70, "phaseStep": 0.35 } },
+    { "t": 18.5, "type": "wave", "enemy": "fighter", "count": 3, "formation": "v", "spacing": 90, "params": { "breakaway": 2 } },
+    { "t": 22, "type": "wave", "enemy": "drone", "count": 5, "from": "left", "y": 20, "stagger": 0.25, "params": { "z": -850 } },
+    { "t": 25.5, "type": "wave", "enemy": "drone", "count": 5, "from": "right", "y": -15, "stagger": 0.25, "params": { "z": -950 } },
+    { "t": 30, "type": "speed", "value": 1.12 },
+    { "t": 31, "type": "wave", "enemy": "fighter", "count": 4, "formation": "line", "spacing": 110, "params": { "breakaway": 2, "weave": 30 } },
+    { "t": 36, "type": "wave", "enemy": "drone", "count": 6, "formation": "circle", "x": 0, "y": 10, "params": { "radius": 70, "spin": 1.2 } },
+    { "t": 40, "type": "wave", "enemy": "drone", "count": 8, "formation": "scatter", "spacing": 60 },
+    { "t": 44, "type": "wave", "enemy": "fighter", "count": 2, "formation": "line", "spacing": 200, "params": { "breakaway": 1 } },
+    { "t": 45, "type": "wave", "enemy": "drone", "count": 5, "formation": "v", "y": -20, "spacing": 45 },
+    { "t": 50, "type": "wave", "enemy": "fighter", "count": 5, "formation": "v", "spacing": 80, "params": { "weave": 40, "breakaway": 1 } },
+    { "t": 55, "type": "wave", "enemy": "drone", "count": 8, "formation": "circle", "y": 5, "params": { "radius": 85, "spin": -1 } },
+    { "t": 60, "type": "wave", "enemy": "fighter", "count": 3, "formation": "column", "spacing": 120, "params": { "breakaway": 3 } },
+    { "t": 64, "type": "wave", "enemy": "drone", "count": 6, "formation": "line", "spacing": 50, "params": { "ampX": 90, "freq": 1.1 } }
+  ]
+}

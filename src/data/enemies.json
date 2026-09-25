@@ -1,0 +1,50 @@
+{
+  "fighter": {
+    "model": "fighter",
+    "hp": 4,
+    "radius": 15,
+    "score": 5000,
+    "behaviour": "flyby",
+    "speed": 560,
+    "size": "medium",
+    "fire": [{ "pattern": "aimed", "interval": 1.7, "delay": 0.3, "burst": 3, "burstGap": 0.09, "speed": 720 }]
+  },
+  "chaser": {
+    "model": "chaser",
+    "hp": 6,
+    "radius": 15,
+    "score": 8000,
+    "behaviour": "pursuit",
+    "speed": 170,
+    "size": "medium",
+    "fire": [
+      { "pattern": "homing", "interval": 3.4, "delay": 1.4 },
+      { "pattern": "aimed", "interval": 2.3, "delay": 0.8, "burst": 4, "burstGap": 0.08, "speed": 760 }
+    ]
+  },
+  "drone": {
+    "model": "drone",
+    "hp": 1,
+    "radius": 11,
+    "score": 2000,
+    "behaviour": "formation",
+    "speed": 440,
+    "size": "small",
+    "fire": [
+      { "pattern": "spread", "interval": 3, "delay": 0.8, "count": 3, "spreadDeg": 9, "speed": 640, "chance": 0.3 }
+    ]
+  },
+  "ace": {
+    "model": "ace",
+    "hp": 14,
+    "radius": 15,
+    "score": 25000,
+    "behaviour": "evade",
+    "speed": 640,
+    "size": "large",
+    "fire": [
+      { "pattern": "leading", "interval": 1.2, "delay": 1.2, "burst": 3, "burstGap": 0.07, "speed": 840 },
+      { "pattern": "homing", "interval": 4.8, "delay": 3 }
+    ]
+  }
+}
