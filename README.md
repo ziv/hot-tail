@@ -1,6 +1,6 @@
 # Hot Tail
 
-An arcade-speed jet combat shooter for the web — third-person chase view, lock-on missile volleys, barrel rolls and short, loud stages. Original IP; free to play. See [the project outline](./Afterburner-Style%20Web%20Game%20—%20Full%20Project%20Outline.md) for the full plan.
+An arcade-speed jet combat shooter for the web — third-person chase view, lock-on missile volleys, barrel rolls and short, loud stages. Original IP; free to play.
 
 ## Run it
 
@@ -56,13 +56,3 @@ supabase/   Postgres schema + SQL functions for the API (Supabase free tier)
 The simulation never touches the DOM or WebGL, so it runs in Node for tests and on the server: the same seed + input log reproduces a run bit-for-bit. It avoids engine-specific floating-point (all trigonometry goes through `src/core/dmath.ts`, enforced by lint), so Chromium, Firefox, WebKit and Node produce identical state — which is what lets the API re-simulate submitted runs to validate leaderboard scores. The player's frame is a floating origin: the jet stays near (0,0,0) and the world scrolls past along a rail spline.
 
 All art and audio are procedural placeholders generated at boot — no asset downloads (the whole production build is ≈ 195 KB brotli). Two visual styles are selectable in Settings → Graphics: modern 3D, and a retro sprite-scaling mode that pre-renders every model into angle-indexed sprite atlases at boot and draws entities as billboards at ~288 lines with scanlines.
-
-## Milestone status
-
-- **M1 core prototype — done.** Flight envelope + rail, throttle, roll, vulcan, lock-on volleys, homing missiles, enemy framework, streaming terrain, debug overlay, smoke test.
-- **M2 vertical slice — done** (placeholder art/audio). Ocean biome with lighting presets, boss framework, final HUD, menus, results tally, music + SFX, touch layout.
-- **M3 alpha — done** (placeholder art/audio). All 12 enemy types (fighters, heavy air, missile-only ground and naval targets), flares, 3 jets, difficulty + dynamic easing, aim assist / auto-fire, scripted loop, tanker refuel, fly-through clouds, radar + threat ring, desert canyon biome, stages 1–6 with Boss 1 (stage 6) and Boss 2 carrier group (practice preview), seeded wave variants, Arcade / Score Attack / Practice, name entry, leaderboards (API + offline), save migrations, key rebinding, accessibility options, attract-mode replays, quality auto-benchmark, PWA.
-- **M4 beta — done** (placeholder art/audio). All 18 stages across 5 biomes (ocean, desert canyon, mountains, night city + harbour, stratosphere) with 7 new lighting presets and star fields; Boss 3 stealth ace (cloaking) and Boss 4 orbital platform; take-off and landing cutscenes, credits; 5 new music tracks + limiter; replay-validated leaderboard scores (cross-engine deterministic sim, cron re-simulation in the API); balance pass with per-difficulty tuning; 30/60 fps cap, dynamic resolution, lazy chunks, precompressed build; accessibility audit (`docs/accessibility.md`).
-- **M5 release candidate — done.** Full-run regression flows (arcade → refuel → final boss → landing → credits, game over → name entry, settings persistence), emulated iPhone/Pixel touch tests, CSP/security-header test, browser + simulated-hour soak tests (found and fixed a GPU texture leak), boss phase-order fix, mobile HUD layout fix, error reporting (J7) + status page + uptime workflow, privacy policy and in-game score deletion, licence notices, legal/naming review (`docs/legal-review.md`), key art, screenshots, trailer and landing page (`/about.html`).
-- **M6 launch — ready.** Release/rollback/patch runbook in [docs/release.md](./docs/release.md) (beta = Vercel preview of the `beta` branch, instant rollback), [CHANGELOG.md](./CHANGELOG.md), itch.io package (`node scripts/package-itch.mjs`), press kit and launch post drafts in `docs/launch/`. Publishing the posts and portal pages is a manual step.
-- Deferred: glTF/KTX2 pipeline (A7) until real art exists; on-device mobile passes (K4, Q5) — need physical devices (checklist in `docs/release.md`); contracted music/SFX (H6/H7); localisation (K8) dropped — English only by decision; ad-based portals (Poki, CrazyGames) skipped — they require ads.
