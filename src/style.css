@@ -709,3 +709,8 @@ body.retro::after {
     -webkit-mask-image: none;
   }
 }
+
+.board .ok {
+  color: var(--cyan);
+  font-size: 11px;
+}

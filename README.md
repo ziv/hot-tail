@@ -11,7 +11,7 @@ pnpm dev          # http://localhost:5173
 
 Useful URL flags: `?debug` (tuning panel, timeline scrubber, cheats, all practice stages unlocked — also the <kbd>`</kbd> key), `?quality=low|medium|high`, `?autotest` (autopilot plays stage 1; used by the smoke test).
 
-Online leaderboard: set `VITE_API_BASE` to a deployed [Hot Tail API](./server/README.md) at build time. Without it, scores are kept locally and everything else works offline (the production build is also an installable PWA).
+Deploy: game + API go to **Vercel** (Hobby) with a **Supabase** (free) database — setup steps in [server/README.md](./server/README.md). `pnpm build:vercel` produces the deployable output. Without a configured API, scores are kept locally and everything works offline (the production build is also an installable PWA). Locally: `pnpm dev:api` + `VITE_API_BASE= pnpm dev`.
 
 | Command | What it does |
 | --- | --- |
@@ -49,7 +49,8 @@ src/
   net/      leaderboard client (online or local fallback), anonymous analytics
   data/     tuning.json, enemies.json, jets.json, stage timelines (hot-reload in dev)
 shared/     leaderboard rules shared by client and API (validation, profanity filter)
-server/     Cloudflare Worker + D1 leaderboard/analytics API
+server/     leaderboard/analytics API — one Vercel function (see server/README.md)
+supabase/   Postgres schema + SQL functions for the API (Supabase free tier)
 ```
 
 The simulation never touches the DOM or WebGL, so it runs in Node for tests and on the server: the same seed + input log reproduces a run bit-for-bit. It avoids engine-specific floating-point (all trigonometry goes through `src/core/dmath.ts`, enforced by lint), so Chromium, Firefox, WebKit and Node produce identical state — which is what lets the API re-simulate submitted runs to validate leaderboard scores. The player's frame is a floating origin: the jet stays near (0,0,0) and the world scrolls past along a rail spline.

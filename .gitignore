@@ -7,3 +7,5 @@ test-results
 .vite
 .idea/
 .claude/settings.local.json
+.vercel
+.env*.local

@@ -227,28 +227,44 @@ export interface SubmitResult {
   rank: number;
   weeklyRank: number;
   best: boolean;
+  status: ScoreStatus;
 }
 
-/** Shared submit flow: validate → rate-limit → store → rank. */
+/**
+ * Shared submit flow: validate input → rate-limit → re-simulate the replay
+ * (J4; a full run takes well under a second) → store → rank.
+ */
 export async function submitScore(
   store: ScoreStore,
   body: unknown,
   ipHash: string,
   now: number,
+  validate?: RunValidator,
 ): Promise<{ status: number; body: SubmitResult | { error: string } }> {
   const v = validateSubmission(body);
   if (!v.ok) return { status: 400, body: { error: v.error } };
   const sub = v.value;
   const recent = await store.countRecent(sub.playerId, ipHash, now - RATE_LIMIT.window);
   if (recent >= RATE_LIMIT.max) return { status: 429, body: { error: 'rate limited' } };
+  let status: ScoreStatus = sub.replay ? 'pending' : 'unverifiable';
+  if (sub.replay && validate) {
+    try {
+      status = validate(sub.replay, sub.score);
+    } catch {
+      status = 'rejected';
+    }
+  }
   const prevBest = await store.bestOf(sub.mode, 0, sub.playerId);
-  await store.insert({ ...sub, createdAt: now, ipHash, status: sub.replay ? 'pending' : 'unverifiable' });
+  // Rejected runs are kept for moderation but never ranked.
+  await store.insert({ ...sub, createdAt: now, ipHash, status });
+  const ranked = status !== 'rejected';
   return {
     status: 200,
     body: {
-      rank: await store.rankOf(sub.mode, 0, sub.playerId),
-      weeklyRank: await store.rankOf(sub.mode, weekStart(now), sub.playerId),
-      best: sub.score > prevBest,
+      rank: ranked ? await store.rankOf(sub.mode, 0, sub.playerId) : 0,
+      weeklyRank: ranked ? await store.rankOf(sub.mode, weekStart(now), sub.playerId) : 0,
+      best: ranked && sub.score > prevBest,
+      status,
     },
   };
 }

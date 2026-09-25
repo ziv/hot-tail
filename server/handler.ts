@@ -2,20 +2,24 @@ import {
   aroundMe,
   LB_MODES,
   periodStart,
+  processPending,
   submitScore,
+  type RunValidator,
   type LbMode,
   type LbPeriod,
   type ScoreStore,
-} from '../../shared/leaderboard';
+} from '../shared/leaderboard';
 
 /**
- * Leaderboard + analytics API (J3/J6). Pure request handler with injected
- * storage so it runs the same on Cloudflare Workers (D1) and in tests.
+ * Leaderboard + analytics API (J3/J4/J6). Pure request handler with injected
+ * storage and validator, so it runs the same on Vercel (Supabase), in the local
+ * dev server (memory) and in tests.
  *
  *   POST /api/scores                 submit a score (validated, rate limited)
  *   GET  /api/scores?mode&period     top 50 (best per player)
  *   GET  /api/scores/around?mode&period&playerId
  *   POST /api/events                 anonymous aggregate gameplay stats
+ *   GET  /api/cron/validate          daily sweep of unvalidated runs (Bearer CRON_SECRET)
  *   GET  /api/health
  */
 export interface EventSink {
@@ -28,6 +32,9 @@ export interface Deps {
   allowedOrigin: string;
   salt: string;
   now: () => number;
+  /** Re-simulates a run replay (J4); omitted → scores stay 'pending' for the cron. */
+  validate?: RunValidator;
+  cronSecret?: string;
 }
 
 const EVENT_TYPES = new Set(['stage_start', 'stage_clear', 'death', 'game_over', 'session_length']);
@@ -42,10 +49,17 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
   try {
     if (url.pathname === '/api/health') return json(200, { ok: true });
 
+    if (url.pathname === '/api/cron/validate') {
+      if (!deps.cronSecret || req.headers.get('authorization') !== `Bearer ${deps.cronSecret}`)
+        return json(401, { error: 'unauthorized' });
+      if (!deps.validate) return json(200, { validated: 0 });
+      return json(200, { validated: await processPending(deps.store, deps.validate, 50) });
+    }
+
     if (url.pathname === '/api/scores' && req.method === 'POST') {
       const body = await readJson(req, 500_000);
-      const ipHash = await hashIp(req.headers.get('cf-connecting-ip') ?? 'local', deps.salt);
-      const res = await submitScore(deps.store, body, ipHash, deps.now());
+      const ipHash = await hashIp(clientIp(req), deps.salt);
+      const res = await submitScore(deps.store, body, ipHash, deps.now(), deps.validate);
       return json(res.status, res.body);
     }
 
@@ -104,6 +118,16 @@ async function readJson(req: Request, maxBytes: number): Promise<unknown> {
   } catch {
     throw new HttpError(400, 'invalid json');
   }
+}
+
+/** Client IP from the platform's proxy headers (Vercel sets x-real-ip / x-forwarded-for). */
+function clientIp(req: Request): string {
+  return (
+    req.headers.get('x-real-ip') ??
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('cf-connecting-ip') ??
+    'local'
+  );
 }
 
 function corsHeaders(req: Request, allowed: string): Record<string, string> {

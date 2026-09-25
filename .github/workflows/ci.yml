@@ -20,6 +20,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      # Vercel Build Output + end-to-end check of the bundled API function.
+      - run: pnpm build:vercel
+      - run: pnpm vitest run tests/vercel-bundle.test.ts
       - uses: actions/upload-artifact@v4
         with:
           name: dist

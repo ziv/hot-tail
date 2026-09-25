@@ -22,13 +22,13 @@ export class Analytics {
   }
 
   track(type: StatType, stage: number, value = 1): void {
-    if (!this.enabled || !API) return;
+    if (!this.enabled || API === undefined) return;
     this.queue.push({ type, stage, value });
     if (this.queue.length >= 50) this.flush();
   }
 
   flush(beacon = false): void {
-    if (!API || this.queue.length === 0) return;
+    if (API === undefined || this.queue.length === 0) return;
     const body = JSON.stringify({ events: this.queue.splice(0) });
     const url = `${API}/api/events`;
     if (beacon && navigator.sendBeacon) navigator.sendBeacon(url, body);

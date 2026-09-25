@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cleanName, isProfane, MemoryScoreStore, validateSubmission, weekStart } from '../shared/leaderboard';
-import { handleRequest, type Deps } from '../server/src/handler';
+import { handleRequest, type Deps } from '../server/handler';
 
 const PID = 'a'.repeat(24);
 const PID2 = 'b'.repeat(24);

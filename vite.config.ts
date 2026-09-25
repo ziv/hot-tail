@@ -12,7 +12,8 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  server: { port: 5173, host: true },
+  // /api → local API (`pnpm dev:api`) when developing against the backend.
+  server: { port: 5173, host: true, proxy: { '/api': 'http://localhost:8787' } },
   preview: { port: 4173 },
   build: {
     target: 'es2022',

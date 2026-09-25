@@ -13,8 +13,8 @@ import {
 
 /**
  * Leaderboard client (G10/J3). Talks to the Hot Tail API when VITE_API_BASE is
- * configured and reachable; otherwise falls back to a local board in
- * localStorage so offline and self-hosted play still has high scores.
+ * set — an empty string means same-origin (/api on the Vercel deployment) — and
+ * falls back to a local board in localStorage when offline or unconfigured.
  */
 const API = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '');
 const LOCAL_KEY = 'hot-tail.localScores';
@@ -27,21 +27,21 @@ export interface Board {
 
 export class Leaderboard {
   private readonly local: MemoryScoreStore;
-  online = !!API;
+  online = API !== undefined;
 
   constructor() {
     this.local = new MemoryScoreStore(readLocal());
   }
 
   get configured(): boolean {
-    return !!API;
+    return API !== undefined;
   }
 
   async submit(sub: ScoreSubmission): Promise<SubmitResult & { online: boolean }> {
     // Always keep a local copy (without the bulky replay).
     const localRes = await submitScore(this.local, { ...sub, replay: undefined }, 'local', Date.now());
     this.persist();
-    if (API) {
+    if (API !== undefined) {
       try {
         const res = await fetchJson<SubmitResult>(`${API}/api/scores`, {
           method: 'POST',
@@ -59,12 +59,13 @@ export class Leaderboard {
       rank: body.rank ?? 0,
       weeklyRank: body.weeklyRank ?? 0,
       best: body.best ?? false,
+      status: 'unverifiable',
       online: false,
     };
   }
 
   async board(mode: LbMode, period: LbPeriod, playerId: string): Promise<Board> {
-    if (API) {
+    if (API !== undefined) {
       try {
         const q = `mode=${mode}&period=${period}`;
         const [top, around] = await Promise.all([

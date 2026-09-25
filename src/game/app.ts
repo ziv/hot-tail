@@ -895,10 +895,16 @@ export class App {
         version: __APP_VERSION__,
         replay: this.run ? encodeRun(this.run.finish()) : undefined,
       });
+      const check =
+        res.status === 'verified'
+          ? ' · replay verified ✓'
+          : res.status === 'rejected'
+            ? ' · replay rejected'
+            : '';
       this.toast(
         res.rank
-          ? `Ranked #${res.rank}${res.online ? '' : ' (local)'} · this week #${res.weeklyRank}`
-          : 'Score saved',
+          ? `Ranked #${res.rank}${res.online ? '' : ' (local)'} · this week #${res.weeklyRank}${check}`
+          : `Score saved${check}`,
       );
       then();
     });
@@ -1039,7 +1045,7 @@ export class App {
       <h4>Game design &amp; direction</h4><p>Ziv</p>
       <h4>Programming, procedural art &amp; audio</h4><p>Ziv &amp; Claude (Anthropic)</p>
       <h4>Built with</h4><p>Three.js · Vite · TypeScript · Web Audio API</p>
-      <h4>Online services</h4><p>Cloudflare Workers &amp; D1</p>
+      <h4>Online services</h4><p>Vercel · Supabase</p>
       <h4>Special thanks</h4><p>The super-scaler arcade games of the 1980s</p>
       <h4>Music &amp; sound</h4><p>Procedurally synthesised placeholders</p>
       <p class="dim">Free to play. No ads. Thanks for flying.</p>
@@ -1090,8 +1096,16 @@ export class App {
       }),
     );
     void this.leaderboard.board(mode, period, this.save.profile.playerId).then((b) => {
-      const row = (e: { rank: number; name: string; score: number; stage: number; me?: boolean }) =>
-        `<tr class="${e.me ? 'me' : ''}"><td>${e.rank}</td><td>${escapeHtml(e.name)}</td><td>${e.score.toLocaleString()}</td><td>ST ${e.stage}</td></tr>`;
+      // ✓ = replay re-simulated and verified by the server (J4).
+      const row = (e: {
+        rank: number;
+        name: string;
+        score: number;
+        stage: number;
+        me?: boolean;
+        status?: string;
+      }) =>
+        `<tr class="${e.me ? 'me' : ''}"><td>${e.rank}</td><td>${escapeHtml(e.name)}${e.status === 'verified' ? ' <span class="ok" title="Replay verified">✓</span>' : ''}</td><td>${e.score.toLocaleString()}</td><td>ST ${e.stage}</td></tr>`;
       const status = b.online
         ? 'ONLINE'
         : this.leaderboard.configured

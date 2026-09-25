@@ -14,8 +14,8 @@ import {
 import { validateRun } from '@/sim/validate';
 import { dacos, dasin, datan, datan2, dcos, dexp, dsin } from '@/core/dmath';
 import { MemoryScoreStore, processPending } from '../shared/leaderboard';
-import { handleRequest } from '../server/src/handler';
-import { validateReplay } from '../server/src/worker';
+import { handleRequest } from '../server/handler';
+import { validateReplay } from '../server/validate-replay';
 import type { InputFrame } from '@/sim/types';
 
 /** Plays like the app does: stage 1, stage mark into 2 after the clear, refuel mark. */
