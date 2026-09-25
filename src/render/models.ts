@@ -42,10 +42,40 @@ const _m = new Matrix4();
 const _q = new Quaternion();
 const _c = new Color();
 
+/**
+ * Surface response per vertex: [roughness, metalness, panel-line strength].
+ * All zero means "use the material defaults" (the older faceted models).
+ */
+export type Surf = readonly [number, number, number];
+export const SURF = {
+  none: [0, 0, 0],
+  paint: [0.52, 0.28, 0.14],
+  gloss: [0.3, 0.3, 0.1],
+  glass: [0.06, 0.65, 0],
+  metal: [0.3, 0.85, 0.04],
+  matte: [0.82, 0.08, 0.05],
+  soot: [0.9, 0.2, 0],
+} as const satisfies Record<string, Surf>;
+
+export interface PartOpts {
+  /** Keep the geometry's own (smooth) normals instead of baking flat ones. */
+  smooth?: boolean;
+  surf?: Surf;
+  /** Underside colour, blended in where the surface faces down (countershading). */
+  under?: ColorRepresentation;
+  /** Per-vertex override (e.g. a windscreen on a lofted nose), given position and normal. */
+  paint?: (p: Vector3, n: Vector3) => { color: ColorRepresentation; surf?: Surf } | null;
+}
+
+const _c2 = new Color();
+const _pv = new Vector3();
+const _nv = new Vector3();
+
 export class Builder {
   private parts: BufferGeometry[] = [];
 
-  add(geo: BufferGeometry, color: ColorRepresentation, xf: Xf = {}): this {
+  add(geo: BufferGeometry, color: ColorRepresentation, xf: Xf = {}, opts: PartOpts = {}): this {
+    if (opts.smooth && !geo.getAttribute('normal')) geo.computeVertexNormals();
     let g = geo.index ? geo.toNonIndexed() : geo;
     if (g !== geo) geo.dispose();
     _q.setFromEuler(new Euler(...(xf.r ?? [0, 0, 0])));
@@ -54,41 +84,76 @@ export class Builder {
     // Negative scale flips winding; restore it so faces stay front-facing.
     const s = xf.s ?? [1, 1, 1];
     if (s[0] * s[1] * s[2] < 0) g = flipWinding(g);
+    // Non-indexed, so this bakes per-face normals: a flat low-poly look without
+    // flatShading's screen-space derivatives (which yield NaN on sub-pixel
+    // triangles and poison the bloom pass).
+    if (!opts.smooth) g.computeVertexNormals();
     _c.set(color);
-    const n = g.getAttribute('position').count;
+    if (opts.under !== undefined) _c2.set(opts.under);
+    const pos = g.getAttribute('position');
+    const nrm = g.getAttribute('normal');
+    const n = pos.count;
     const colors = new Float32Array(n * 3);
+    const surf = new Float32Array(n * 3);
+    const base = opts.surf ?? SURF.none;
     for (let i = 0; i < n; i++) {
-      colors[i * 3] = _c.r;
-      colors[i * 3 + 1] = _c.g;
-      colors[i * 3 + 2] = _c.b;
+      let r = _c.r;
+      let gg = _c.g;
+      let bb = _c.b;
+      let sf: Surf = base;
+      if (opts.under !== undefined) {
+        const t = Math.min(1, Math.max(0, (-nrm.getY(i) - 0.1) / 0.5));
+        r += (_c2.r - r) * t;
+        gg += (_c2.g - gg) * t;
+        bb += (_c2.b - bb) * t;
+      }
+      if (opts.paint) {
+        const o = opts.paint(_pv.fromBufferAttribute(pos, i), _nv.fromBufferAttribute(nrm, i));
+        if (o) {
+          _c2.set(o.color);
+          r = _c2.r;
+          gg = _c2.g;
+          bb = _c2.b;
+          if (o.surf) sf = o.surf;
+          if (opts.under !== undefined) _c2.set(opts.under);
+        }
+      }
+      colors[i * 3] = r;
+      colors[i * 3 + 1] = gg;
+      colors[i * 3 + 2] = bb;
+      surf[i * 3] = sf[0];
+      surf[i * 3 + 1] = sf[1];
+      surf[i * 3 + 2] = sf[2];
     }
     g.setAttribute('color', new Float32BufferAttribute(colors, 3));
+    g.setAttribute('surf', new Float32BufferAttribute(surf, 3));
     for (const name of Object.keys(g.attributes)) {
-      if (name !== 'position' && name !== 'normal' && name !== 'color') g.deleteAttribute(name);
+      if (!['position', 'normal', 'color', 'surf'].includes(name)) g.deleteAttribute(name);
     }
     this.parts.push(g);
     return this;
   }
 
   /** Adds the geometry and its mirror across the YZ plane. */
-  mirror(make: () => BufferGeometry, color: ColorRepresentation, xf: Xf): this {
-    this.add(make(), color, xf);
+  mirror(make: () => BufferGeometry, color: ColorRepresentation, xf: Xf, opts: PartOpts = {}): this {
+    this.add(make(), color, xf, opts);
     const p = xf.p ?? [0, 0, 0];
     const r = xf.r ?? [0, 0, 0];
     const s = xf.s ?? [1, 1, 1];
-    return this.add(make(), color, {
-      p: [-p[0], p[1], p[2]],
-      r: [r[0], -r[1], -r[2]],
-      s: [-s[0], s[1], s[2]],
-    });
+    return this.add(
+      make(),
+      color,
+      {
+        p: [-p[0], p[1], p[2]],
+        r: [r[0], -r[1], -r[2]],
+        s: [-s[0], s[1], s[2]],
+      },
+      opts,
+    );
   }
 
   build(): BufferGeometry {
     const g = mergeGeometries(this.parts, false)!;
-    // Non-indexed, so this bakes per-face normals: a flat low-poly look without
-    // flatShading's screen-space derivatives (which yield NaN on sub-pixel
-    // triangles and poison the bloom pass).
-    g.computeVertexNormals();
     g.computeBoundingSphere();
     for (const p of this.parts) p.dispose();
     this.parts = [];
@@ -145,312 +210,6 @@ export const cone = (r: number, h: number, seg = 8) => {
   g.rotateX(-Math.PI / 2); // tip toward -Z
   return g;
 };
-
-// ---------------------------------------------------------------- player jet
-export function playerJet(): ModelGeo {
-  const b = new Builder();
-  const hull = '#c9ced8';
-  const dark = '#39414f';
-  const accent = '#2f7bd9';
-  b.add(cone(1.15, 4.6), hull, { p: [0, 0.1, -9.6] });
-  b.add(cyl(1.55, 1.15, 5), hull, { p: [0, 0.1, -4.9] });
-  b.add(cyl(1.7, 1.55, 7), hull, { p: [0, 0, 1.1] });
-  b.add(new SphereGeometry(1, 10, 6), '#1b2a3a', { p: [0, 1.15, -5.2], s: [0.85, 0.75, 2.4] });
-  // Intakes
-  b.mirror(() => new BoxGeometry(1.1, 1.3, 4.5), dark, { p: [1.75, -0.35, -1.2] });
-  // Main wings
-  b.mirror(
-    () =>
-      plate([
-        [0.8, -3.2],
-        [8.2, 2.6],
-        [8.2, 3.9],
-        [0.8, 4.6],
-      ]),
-    hull,
-    { p: [0, -0.1, 0] },
-  );
-  // Wing stripes
-  b.mirror(
-    () =>
-      plate(
-        [
-          [5.6, 0.95],
-          [7.4, 2.4],
-          [7.4, 3],
-          [5.6, 2],
-        ],
-        0.34,
-      ),
-    accent,
-    { p: [0, -0.1, 0] },
-  );
-  // Stabilisers
-  b.mirror(
-    () =>
-      plate([
-        [1.2, 5.4],
-        [4.6, 7.8],
-        [4.6, 8.6],
-        [1.2, 8.4],
-      ]),
-    hull,
-    { p: [0, -0.2, 0] },
-  );
-  // Twin canted tails
-  b.mirror(
-    () =>
-      fin([
-        [4.2, 0],
-        [7.6, 4.2],
-        [8.6, 4.2],
-        [8.4, 0],
-      ]),
-    hull,
-    { p: [1.3, 0.8, 0], r: [0, 0, -0.26] },
-  );
-  b.mirror(
-    () =>
-      fin(
-        [
-          [7.2, 3.1],
-          [7.8, 4.25],
-          [8.6, 4.25],
-          [8.5, 3.1],
-        ],
-        0.3,
-      ),
-    accent,
-    { p: [1.3, 0.8, 0], r: [0, 0, -0.26] },
-  );
-  // Nozzles
-  b.mirror(() => cyl(0.95, 1.05, 1.6, 10), dark, { p: [0.85, -0.05, 5.1] });
-  const glow = new Builder();
-  glow.mirror(() => new CylinderGeometry(0.7, 0.7, 0.2, 10).rotateX(Math.PI / 2), '#ffb266', {
-    p: [0.85, -0.05, 5.95],
-  });
-  return { body: b.build(), glow: glow.build(), radius: 10 };
-}
-
-// ------------------------------------------------------------------- enemies
-export function fighter(): ModelGeo {
-  const b = new Builder();
-  const hull = '#6b6f78';
-  const trim = '#9c2f2a';
-  b.add(cone(1.1, 5), hull, { p: [0, 0, -9] });
-  b.add(cyl(1.6, 1.1, 9), hull, { p: [0, 0, -2.2] });
-  b.add(new SphereGeometry(1, 8, 6), '#2a1414', { p: [0, 1.0, -5], s: [0.8, 0.7, 2] });
-  b.mirror(
-    () =>
-      plate([
-        [1, -4],
-        [9, 3],
-        [9, 4.5],
-        [1, 4],
-      ]),
-    hull,
-    {},
-  );
-  b.mirror(
-    () =>
-      plate(
-        [
-          [6.5, 1.2],
-          [9, 3],
-          [9, 4.5],
-          [6.5, 3.5],
-        ],
-        0.34,
-      ),
-    trim,
-    {},
-  );
-  b.add(
-    fin([
-      [2, 0],
-      [5.5, 4.8],
-      [6.8, 4.8],
-      [6.2, 0],
-    ]),
-    trim,
-    { p: [0, 0.8, 0] },
-  );
-  b.add(cyl(1.1, 1.2, 1.5), '#2b2b2b', { p: [0, 0, 3] });
-  const glow = new Builder().add(new CylinderGeometry(0.8, 0.8, 0.2, 8).rotateX(Math.PI / 2), '#ff7a3a', {
-    p: [0, 0, 3.8],
-  });
-  return { body: b.build(), glow: glow.build(), radius: 10 };
-}
-
-export function chaser(): ModelGeo {
-  const b = new Builder();
-  const hull = '#586048';
-  const trim = '#c9a23a';
-  b.add(cone(1.3, 4), hull, { p: [0, 0.3, -8.5] });
-  b.add(cyl(1.8, 1.3, 7), hull, { p: [0, 0.3, -3] });
-  b.add(new SphereGeometry(1, 8, 6), '#1c2014', { p: [0, 1.5, -5], s: [0.9, 0.7, 2] });
-  // Twin booms
-  b.mirror(() => cyl(0.9, 0.9, 13), hull, { p: [4, 0, 1] });
-  b.mirror(
-    () =>
-      plate([
-        [0.5, -2],
-        [10.5, 0],
-        [10.5, 2.8],
-        [0.5, 3.5],
-      ]),
-    hull,
-    {},
-  );
-  b.mirror(
-    () =>
-      fin([
-        [4.5, 0],
-        [6.5, 3.6],
-        [7.6, 3.6],
-        [7.6, 0],
-      ]),
-    trim,
-    { p: [4, 0.6, 0] },
-  );
-  b.add(
-    plate([
-      [-4, 6],
-      [4, 6],
-      [4, 7.5],
-      [-4, 7.5],
-    ]),
-    hull,
-    { p: [0, 1.5, 0] },
-  );
-  const glow = new Builder().mirror(
-    () => new CylinderGeometry(0.6, 0.6, 0.2, 8).rotateX(Math.PI / 2),
-    '#ff7a3a',
-    { p: [4, 0, 7.6] },
-  );
-  return { body: b.build(), glow: glow.build(), radius: 11 };
-}
-
-export function drone(): ModelGeo {
-  const b = new Builder();
-  b.add(
-    plate(
-      [
-        [0, -6],
-        [7.5, 3],
-        [4.5, 4.2],
-        [0, 2.4],
-        [-4.5, 4.2],
-        [-7.5, 3],
-      ],
-      1,
-    ),
-    '#2d2638',
-    {},
-  );
-  b.add(new SphereGeometry(1.6, 8, 5), '#3d3450', { p: [0, 0.4, -0.5], s: [1, 0.6, 2] });
-  b.mirror(
-    () =>
-      fin([
-        [1, 0],
-        [3, 2.2],
-        [4, 2.2],
-        [3.6, 0],
-      ]),
-    '#2d2638',
-    { p: [3, 0.4, 0], r: [0, 0, -0.4] },
-  );
-  const glow = new Builder()
-    .add(new SphereGeometry(0.7, 8, 6), '#ff3b3b', { p: [0, 0.3, -4.8] })
-    .mirror(() => new BoxGeometry(3.6, 0.25, 0.3), '#ff3b3b', { p: [3, 0.35, 1.2], r: [0, 0.8, 0] });
-  return { body: b.build(), glow: glow.build(), radius: 8 };
-}
-
-export function ace(): ModelGeo {
-  const b = new Builder();
-  const hull = '#1d1f24';
-  const gold = '#d4a640';
-  b.add(cone(1.1, 5.5), hull, { p: [0, 0, -9.8] });
-  b.add(cyl(1.5, 1.1, 9), hull, { p: [0, 0, -2.7] });
-  b.add(new SphereGeometry(1, 8, 6), '#4a3a10', { p: [0, 1.0, -5.5], s: [0.8, 0.7, 2.2] });
-  // Forward-swept wings
-  b.mirror(
-    () =>
-      plate([
-        [1, 0],
-        [8.5, -3.5],
-        [9.2, -2.2],
-        [1, 4.5],
-      ]),
-    hull,
-    {},
-  );
-  b.mirror(
-    () =>
-      plate(
-        [
-          [6.5, -2.4],
-          [8.5, -3.5],
-          [9.2, -2.2],
-          [7, -0.6],
-        ],
-        0.34,
-      ),
-    gold,
-    {},
-  );
-  // Canards
-  b.mirror(
-    () =>
-      plate([
-        [1, -6.5],
-        [3.6, -5],
-        [3.6, -4.3],
-        [1, -4.6],
-      ]),
-    gold,
-    {},
-  );
-  b.mirror(
-    () =>
-      fin([
-        [2.5, 0],
-        [5.6, 3.8],
-        [6.6, 3.8],
-        [6.4, 0],
-      ]),
-    hull,
-    { p: [1.2, 0.8, 0], r: [0, 0, -0.35] },
-  );
-  b.mirror(() => cyl(0.8, 0.9, 1.4), '#101010', { p: [0.7, 0, 2.6] });
-  const glow = new Builder().mirror(
-    () => new CylinderGeometry(0.6, 0.6, 0.2, 8).rotateX(Math.PI / 2),
-    '#ffd36a',
-    { p: [0.7, 0, 3.35] },
-  );
-  return { body: b.build(), glow: glow.build(), radius: 10 };
-}
-
-// ------------------------------------------------------------------ missiles
-export function missile(enemy: boolean): ModelGeo {
-  const b = new Builder();
-  const body = enemy ? '#3b3b3b' : '#e8e8e8';
-  const tip = enemy ? '#d23b1f' : '#9aa4b4';
-  b.add(cyl(0.45, 0.45, 5), body, {});
-  b.add(cone(0.45, 1.4), tip, { p: [0, 0, -3.2] });
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2;
-    b.add(new BoxGeometry(0.08, 1.4, 1.2), body, {
-      p: [Math.sin(a) * 0.6, Math.cos(a) * 0.6, 2.1],
-      r: [0, 0, -a],
-    });
-  }
-  const glow = new Builder().add(new SphereGeometry(0.55, 6, 4), enemy ? '#ff6a1f' : '#9fe8ff', {
-    p: [0, 0, 2.7],
-    s: [1, 1, 1.8],
-  });
-  return { body: b.build(), glow: glow.build(), radius: 3 };
-}
 
 export function playerBullet(): BufferGeometry {
   const g = new BoxGeometry(0.5, 0.5, 30);

@@ -1,42 +1,21 @@
+import { bossCore, bossEngine, bossTurret, fortressHull, type ModelGeo } from './models';
+import { aaa, bossBridge, bossSam, carrier, destroyer, missileBoat, sam, tank } from './models-m3';
+import { bossBay, bossCockpit, bossJet, bossPanel, bossReactor, bossSilo, orbital } from './models-m4';
 import {
   ace,
-  bossCore,
-  bossEngine,
-  bossTurret,
+  awacs,
+  bomber,
   chaser,
   drone,
   fighter,
-  fortressHull,
-  missile,
-  playerJet,
-  type ModelGeo,
-} from './models';
-import {
-  aaa,
-  awacs,
-  bomber,
-  bossBridge,
-  bossSam,
-  carrier,
-  destroyer,
   gunship,
-  missileBoat,
+  missile,
   playerDart,
+  playerJet,
   playerManta,
-  sam,
-  tank,
-  tanker,
-} from './models-m3';
-import {
-  bossBay,
-  bossCockpit,
-  bossJet,
-  bossPanel,
-  bossReactor,
-  bossSilo,
-  orbital,
   stealth,
-} from './models-m4';
+  tanker,
+} from './models-aircraft';
 
 /** Model key (as used by simulation entities) → procedural geometry factory. */
 export const MODEL_FACTORIES: Record<string, () => ModelGeo> = {

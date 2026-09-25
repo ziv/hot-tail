@@ -19,6 +19,7 @@ import { isCloaked } from '@/sim/boss';
 import type { Entity } from '@/sim/types';
 import { enemyBullet, playerBullet, type ModelGeo } from './models';
 import { CAPACITY, MODEL_FACTORIES, MODEL_SCALE } from './registry';
+import { applySurfaceDetail } from './surface';
 
 /**
  * Instanced rendering (B8): one InstancedMesh (plus an optional unlit "glow"
@@ -81,6 +82,7 @@ export class EntityRenderer {
 
   constructor() {
     this.bodyMat = new MeshStandardMaterial({ vertexColors: true, metalness: 0.35, roughness: 0.5 });
+    applySurfaceDetail(this.bodyMat);
     const glowMat = new MeshBasicMaterial({ vertexColors: true, color: new Color(2.6, 2.6, 2.6) });
     for (const [key, cap] of Object.entries(CAPACITY)) {
       const model = new InstancedModel(MODEL_FACTORIES[key](), cap, this.bodyMat, glowMat);
@@ -212,9 +214,9 @@ const flameFragment = /* glsl */ `
 
 /** Nozzle positions per player jet model (for the afterburner flames). */
 const NOZZLES: Record<string, { x: number[]; y: number; z: number; r: number }> = {
-  player: { x: [-0.85, 0.85], y: -0.05, z: 5.95, r: 0.75 },
-  playerDart: { x: [0], y: 0, z: 6.05, r: 0.85 },
-  playerManta: { x: [-1.3, 1.3], y: 0, z: 6.45, r: 0.9 },
+  player: { x: [-0.95, 0.95], y: 0, z: 6.3, r: 0.56 },
+  playerDart: { x: [0], y: 0.02, z: 6.2, r: 0.68 },
+  playerManta: { x: [-1.55, 1.55], y: 0, z: 6.7, r: 0.63 },
 };
 
 /** The player's jet: a regular mesh group with afterburner flames. */

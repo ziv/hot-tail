@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0
+
+- New aircraft models: all 13 aircraft (the three player jets, fighters, drones, aces, bomber, attack helicopter, AWACS, tanker, the Wraith and missiles) rebuilt with smooth lofted fuselages, airfoil wings, glass canopies, open intakes, see-in metal nozzles, underwing missiles, two-tone paint and panel lines.
+- Model viewer for development at `/tools/models.html`.
+
 ## 1.0.1
 
 - Touch: tapping the game view on a touchscreen laptop or Chromebook no longer grabs mouse pointer lock (which made the on-screen buttons stop responding).

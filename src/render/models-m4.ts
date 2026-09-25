@@ -1,53 +1,8 @@
 import { BoxGeometry, CylinderGeometry, IcosahedronGeometry, SphereGeometry, TorusGeometry } from 'three';
-import { Builder, cone, cyl, fin, plate, type ModelGeo } from './models';
+import { Builder, cyl, type ModelGeo } from './models';
 
-/** M4 procedural models: Boss 3 stealth ace "Wraith" and Boss 4 orbital platform "Halo". */
+/** M4 procedural models: Boss 3 "Wraith" parts and the Boss 4 orbital platform "Halo" (the Wraith airframe is in models-aircraft.ts). */
 const glowDisc = (r: number) => new CylinderGeometry(r, r, 0.3, 12).rotateX(Math.PI / 2);
-
-export function stealth(): ModelGeo {
-  const b = new Builder();
-  const skin = '#23252c';
-  const edge = '#34373f';
-  // Faceted flying wing with a sawtooth trailing edge.
-  b.add(
-    plate(
-      [
-        [0, -34],
-        [46, 8],
-        [40, 14],
-        [30, 8],
-        [20, 16],
-        [10, 10],
-        [0, 18],
-        [-10, 10],
-        [-20, 16],
-        [-30, 8],
-        [-40, 14],
-        [-46, 8],
-      ],
-      3,
-    ),
-    skin,
-    {},
-  );
-  b.add(cone(8, 24, 4), edge, { p: [0, 2, -18], r: [0, 0, Math.PI / 4], s: [1, 0.35, 1] });
-  b.add(new BoxGeometry(18, 4, 26), edge, { p: [0, 2.5, 2] });
-  b.mirror(
-    () =>
-      fin([
-        [6, 0],
-        [12, 7],
-        [16, 7],
-        [15, 0],
-      ]),
-    edge,
-    { p: [10, 3, 0], r: [0, 0, -0.5] },
-  );
-  const glow = new Builder()
-    .mirror(() => new BoxGeometry(14, 0.3, 0.3), '#b36cff', { p: [26, 1.6, 3], r: [0, 0.7, 0] })
-    .add(new BoxGeometry(10, 0.4, 0.4), '#b36cff', { p: [0, 4.8, -8] });
-  return { body: b.build(), glow: glow.build(), radius: 48 };
-}
 
 export function bossJet(): ModelGeo {
   const b = new Builder();
