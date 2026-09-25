@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Touch: tapping the game view on a touchscreen laptop or Chromebook no longer grabs mouse pointer lock (which made the on-screen buttons stop responding).
+- CI: the cross-browser determinism check no longer needs WebGL (headless Firefox on Linux has none); smoke test made robust on slow runners; failed tests keep a Playwright trace.
+
 ## 1.0.0 — launch
 
 First public release.

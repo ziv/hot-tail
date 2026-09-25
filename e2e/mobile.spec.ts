@@ -34,6 +34,9 @@ test('phone: tap through title → take-off → touch controls', async ({ page }
     const box = (await btn.boundingBox())!;
     expect(box.width).toBeGreaterThanOrEqual(44); // touch target size
   }
+  // Taps are replayed as mouse events; they must not grab pointer lock (which
+  // would route every touch to the canvas).
+  expect(await page.evaluate(() => !!document.pointerLockElement)).toBe(false);
   // Pause from the on-screen button.
   await page.locator('.touch-pause').tap();
   await page.waitForFunction(() => window.__hotTail?.state === 'paused');

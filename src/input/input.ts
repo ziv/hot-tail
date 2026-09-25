@@ -99,6 +99,8 @@ export class InputManager {
   private readonly nav: NavAction[] = [];
   private pausePressed = false;
   private mouseButtons = 0;
+  /** Time of the last touch: browsers replay taps as mouse events right after. */
+  private lastTouchAt = -Infinity;
   private cursorX = 0;
   private cursorY = 0;
   private mouseActive = false;
@@ -119,7 +121,9 @@ export class InputManager {
       this.mouseButtons = 0;
     });
     canvas.addEventListener('mousedown', (e) => {
-      if (!this.gameplayActive) return;
+      // A tap's emulated mousedown must not switch to mouse or take pointer lock
+      // (locked, every touch would land on the canvas instead of the buttons).
+      if (!this.gameplayActive || performance.now() - this.lastTouchAt < 1000) return;
       this.mouseButtons |= 1 << e.button;
       this.lastSource = 'mouse';
       this.mouseActive = true;
@@ -140,7 +144,9 @@ export class InputManager {
     window.addEventListener(
       'touchstart',
       () => {
+        this.lastTouchAt = performance.now();
         this.lastSource = 'touch';
+        if (document.pointerLockElement) document.exitPointerLock();
         this.touch.setVisible(this.gameplayActive);
       },
       { passive: true },

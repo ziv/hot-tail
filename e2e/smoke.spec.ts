@@ -12,8 +12,10 @@ test('boots and plays 10 seconds without errors', async ({ page }) => {
   });
   page.on('pageerror', (err) => consoleErrors.push(String(err)));
 
-  await page.goto('/?autotest&quality=low');
+  await page.goto('/?autotest&quality=low&hooks');
   await page.waitForFunction(() => window.__hotTail?.state === 'playing', null, { timeout: 30_000 });
+  // CI runners render a few fps in software; let the sim keep up with real time.
+  await page.evaluate(() => window.__hotTail!.debug!.turbo());
   await page.waitForFunction(() => (window.__hotTail?.simTime ?? 0) >= 10, null, { timeout: 60_000 });
 
   const result = await page.evaluate(() => ({

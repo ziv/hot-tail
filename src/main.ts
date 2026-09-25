@@ -38,7 +38,11 @@ function fail(message: string): void {
   ui.innerHTML = `<section class="screen in"><h1 class="logo"><span class="logo-hot">HOT</span><span class="logo-tail">TAIL</span></h1><p class="screen-sub">${message}</p></section>`;
 }
 
+/** Cross-engine determinism probe (lazy: only loaded by tests). Headless, so it works without WebGL. */
+const probe = async () => (await import('@/sim/probe')).determinismProbe();
+
 async function main(): Promise<void> {
+  Object.assign(window, { __hotTail: { errors, probe } });
   if (!supportsWebGL2()) {
     fail(
       'Your browser or device does not support WebGL 2, which Hot Tail needs. Try a recent Chrome, Edge, Firefox or Safari.',
@@ -71,8 +75,7 @@ async function main(): Promise<void> {
       get score() {
         return app.sim?.score.score ?? 0;
       },
-      /** Cross-engine determinism probe (lazy: only loaded by tests). */
-      probe: async () => (await import('@/sim/probe')).determinismProbe(),
+      probe,
     },
   });
 

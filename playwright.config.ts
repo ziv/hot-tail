@@ -11,7 +11,8 @@ export default defineConfig({
   timeout: 90_000,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
-  use: { baseURL: 'http://localhost:4173' },
+  // CI keeps a trace (DOM snapshots, console, network) of failed tests in the uploaded artifact.
+  use: { baseURL: 'http://localhost:4173', trace: process.env.CI ? 'retain-on-failure' : 'off' },
   projects: [
     {
       name: 'chromium',
